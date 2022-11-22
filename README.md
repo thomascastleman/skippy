@@ -1,2 +1,3 @@
 # skippy
-Final project for CSCI 1230
+
+It's Skippy, not Jif.
