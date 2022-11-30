@@ -18,9 +18,8 @@ In the code, this will correspond to changing the scenefile format and its parse
   - [ ] Rotation interpolation? (v2)
   - [ ] Non-linear interpolation? (v2)
 
-- [ ] Producing a .GIF file from our raytracer output
-  - [ ] Converting our 24-bit color into 8-bit color supported by GIF
-  - [ ] Actually producing the .GIF
+- [ ] Use FFMPEG to produce video from separate images
+  - https://stackoverflow.com/questions/24961127/how-to-create-a-video-from-images-with-ffmpeg
 
 As the first two parts listed above are most of the project's complexity and are pretty intertwined, we plan to pair program most of the project.
 
