@@ -34,6 +34,7 @@ private:
     bool parseCameraData(const QDomElement &cameradata);
     bool parseLightData(const QDomElement &lightdata);
     bool parseObjectData(const QDomElement &object);
+    bool parseKeyFrame(const QDomElement &keyFrame, TransformationMap& tm, std::vector<std::string>& order);
     bool parseTransBlock(const QDomElement &transblock, SceneNode* node);
     bool parsePrimitive(const QDomElement &prim, SceneNode* node);
 

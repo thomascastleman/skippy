@@ -217,6 +217,56 @@ template <typename T> bool parseQuadruple(
    return true;
 }
 
+
+template <typename T> bool parseQuadruple(
+       const QDomElement &quadruple,
+       std::string &a,
+       T &b,
+       T &c,
+       T &d,
+       const QString &str_a,
+       const QString &str_b,
+       const QString &str_c,
+       const QString &str_d) {
+   if (!quadruple.hasAttribute(str_a) ||
+       !quadruple.hasAttribute(str_b) ||
+       !quadruple.hasAttribute(str_c) ||
+       !quadruple.hasAttribute(str_d))
+       return false;
+   a = quadruple.attribute(str_a).toStdString();
+   b = quadruple.attribute(str_b).toDouble();
+   c = quadruple.attribute(str_c).toDouble();
+   d = quadruple.attribute(str_d).toDouble();
+   return true;
+}
+
+template <typename T> bool parseQuintuple(
+       const QDomElement &quadruple,
+       std::string &a,
+       T &b,
+       T &c,
+       T &d,
+       T &e,
+       const QString &str_a,
+       const QString &str_b,
+       const QString &str_c,
+       const QString &str_d,
+       const QString &str_e) {
+   if (!quadruple.hasAttribute(str_a) ||
+       !quadruple.hasAttribute(str_b) ||
+       !quadruple.hasAttribute(str_c) ||
+       !quadruple.hasAttribute(str_d) ||
+       !quadruple.hasAttribute(str_e))
+       return false;
+   a = quadruple.attribute(str_a).toStdString();
+   b = quadruple.attribute(str_b).toDouble();
+   c = quadruple.attribute(str_c).toDouble();
+   d = quadruple.attribute(str_d).toDouble();
+   e = quadruple.attribute(str_e).toDouble();
+   return true;
+}
+
+
 /**
 * Helper function to parse a matrix. Assumes the input matrix is row-major, which is converted to
 * a column-major glm matrix.
@@ -314,9 +364,20 @@ bool ScenefileReader::parseGlobalData(const QDomElement &globaldata) {
                PARSE_ERROR(e);
                return false;
            }
+       } else if (e.tagName() == "framerate") {
+           if (!parseSingle(e, m_globalData.framerate, "fps")) {
+               PARSE_ERROR(e);
+               return false;
+           }
+       } else if (e.tagName() == "duration") {
+           if (!parseSingle(e, m_globalData.duration, "seconds")) {
+               PARSE_ERROR(e);
+               return false;
+           }
        }
-       childNode = childNode.nextSibling();
    }
+
+   std::cout << m_globalData.framerate << ", " << m_globalData.duration << std::endl;
 
    return true;
 }
@@ -564,6 +625,150 @@ bool ScenefileReader::parseObjectData(const QDomElement &object) {
    return true;
 }
 
+
+bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationMap& tm, std::vector<std::string>& prevOrder) {
+    QDomNode childNode = keyFrame.firstChild();
+    float key = keyFrame.attribute("key").toFloat();
+    std::string type = keyFrame.attribute("type").toStdString();
+
+    int frame;
+    if (type == "fractional") {
+        frame = (int) ceil(key * ceil(m_globalData.framerate * m_globalData.duration));
+    } else {
+        frame = (int) key;
+    }
+
+    std::vector<std::string> curOrder;
+    while (!childNode.isNull()) {
+        QDomElement e = childNode.toElement();
+        if (e.tagName() == "translate") {
+            SceneTransformation *t = new SceneTransformation();
+            t->type = TransformationType::TRANSFORMATION_TRANSLATE;
+
+            std::string id;
+            if (!parseQuadruple(e, id, t->translate.x, t->translate.y, t->translate.z, "id", "x", "y", "z")) {
+                PARSE_ERROR(e);
+                return false;
+            }
+
+            curOrder.push_back(id);
+
+            if (tm.contains(id)) {
+               auto idTranslations = tm.at(id);
+               idTranslations.push_back({ frame, t });
+            } else {
+               tm.emplace(id, std::vector<std::tuple<int, SceneTransformation*>>());
+               auto idTranslations = tm.at(id);
+               if (frame != 0) {
+                   SceneTransformation *defaultTranslate = new SceneTransformation();
+                   t->type = TransformationType::TRANSFORMATION_TRANSLATE;
+                   t->translate = glm::vec3(0.f);
+
+                   idTranslations.push_back({ 0, defaultTranslate });
+               }
+               idTranslations.push_back({ frame, t });
+            }
+
+        } else if (e.tagName() == "rotate") {
+            SceneTransformation *t = new SceneTransformation();
+            t->type = TransformationType::TRANSFORMATION_ROTATE;
+
+            std::string id;
+            float angle;
+            if (!parseQuintuple(e, id, t->rotate.x, t->rotate.y, t->rotate.z, angle, "id", "x", "y", "z", "angle")) {
+                PARSE_ERROR(e);
+                return false;
+            }
+            // Convert to radians
+            t->angle = angle * M_PI / 180;
+
+            curOrder.push_back(id);
+
+            if (tm.contains(id)) {
+               auto idRotations = tm.at(id);
+               idRotations.push_back({ frame, t });
+            } else {
+               tm.emplace(id, std::vector<std::tuple<int, SceneTransformation*>>());
+               auto idRotations= tm.at(id);
+               if (frame != 0) {
+                   SceneTransformation *defaultRotate = new SceneTransformation();
+                   t->type = TransformationType::TRANSFORMATION_ROTATE;
+                   t->rotate = glm::vec3{ 0.f, 1.f, 0.f };
+                   t->angle = 0;
+
+                   idRotations.push_back({ 0, defaultRotate });
+               }
+               idRotations.push_back({ frame, t });
+            }
+        } else if (e.tagName() == "scale") {
+            SceneTransformation *t = new SceneTransformation();
+            t->type = TransformationType::TRANSFORMATION_SCALE;
+
+            std::string id;
+            if (!parseQuadruple(e, id, t->scale.x, t->scale.y, t->scale.z, "id", "x", "y", "z")) {
+                PARSE_ERROR(e);
+                return false;
+            }
+
+            curOrder.push_back(id);
+
+            if (tm.contains(id)) {
+               auto idTranslations = tm.at(id);
+               idTranslations.push_back({ frame, t });
+            } else {
+               tm.emplace(id, std::vector<std::tuple<int, SceneTransformation*>>());
+               auto idTranslations = tm.at(id);
+               if (frame != 0) {
+                   SceneTransformation *defaultScale = new SceneTransformation();
+                   t->type = TransformationType::TRANSFORMATION_SCALE;
+                   t->scale = glm::vec3{ 1.f, 1.f, 1.f };
+
+                   idTranslations.push_back({ 0, defaultScale});
+               }
+               idTranslations.push_back({ frame, t });
+            }
+        } else if (e.tagName() == "matrix") {
+            return false;
+        }
+    }
+
+    int sizeWithDups = curOrder.size();
+    curOrder.erase(unique(curOrder.begin(), curOrder.end()), curOrder.end());
+    int sizeWithoutDups = curOrder.size();
+
+    if (sizeWithDups != sizeWithoutDups) {
+        std::cout << "ERROR: Duplicated id in keyframe" << std::endl;
+        PARSE_ERROR(keyFrame);
+        return false;
+    }
+
+    std::vector<std::string> sharedFromCurrent;
+    std::vector<std::string> sharedFromPrevious;
+
+    for (std::string &s : curOrder) {
+        if (std::find(prevOrder.begin(), prevOrder.end(), s) != prevOrder.end()) {
+            sharedFromCurrent.push_back(s);
+        }
+    }
+
+    for (std::string &s : prevOrder) {
+        if (std::find(curOrder.begin(), curOrder.end(), s) != curOrder.end()) {
+            sharedFromPrevious.push_back(s);
+        }
+    }
+
+    if (sharedFromCurrent != sharedFromPrevious) {
+        std::cout << "ERROR: Invalid ordering of transformations" << std::endl;
+        PARSE_ERROR(keyFrame);
+        return false;
+    }
+
+    prevOrder.clear();
+    std::copy(curOrder.begin(), curOrder.end(), prevOrder.begin());
+
+    return true;
+}
+
 /**
 * Parse a <transblock> tag into node, which consists of any number of
 * <translate>, <rotate>, <scale>, or <matrix> elements followed by one
@@ -583,55 +788,23 @@ bool ScenefileReader::parseTransBlock(const QDomElement &transblock, SceneNode* 
    QDomNode childNode = transblock.firstChild();
    while (!childNode.isNull()) {
        QDomElement e = childNode.toElement();
-       if (e.tagName() == "translate") {
-           SceneTransformation *t = new SceneTransformation();
-           node->transformations.push_back(t);
-           t->type = TransformationType::TRANSFORMATION_TRANSLATE;
 
-           if (!parseTriple(e, t->translate.x, t->translate.y, t->translate.z, "x", "y", "z")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else if (e.tagName() == "rotate") {
-           SceneTransformation *t = new SceneTransformation();
-           node->transformations.push_back(t);
-           t->type = TransformationType::TRANSFORMATION_ROTATE;
+       std::vector<std::string> order;
+       TransformationMap tm = TransformationMap();
 
-           float angle;
-           if (!parseQuadruple(e, t->rotate.x, t->rotate.y, t->rotate.z, angle, "x", "y", "z", "angle")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-
-           // Convert to radians
-           t->angle = angle * M_PI / 180;
-       } else if (e.tagName() == "scale") {
-           SceneTransformation *t = new SceneTransformation();
-           node->transformations.push_back(t);
-           t->type = TransformationType::TRANSFORMATION_SCALE;
-
-           if (!parseTriple(e, t->scale.x, t->scale.y, t->scale.z, "x", "y", "z")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else if (e.tagName() == "matrix") {
-           SceneTransformation* t = new SceneTransformation();
-           node->transformations.push_back(t);
-           t->type = TransformationType::TRANSFORMATION_MATRIX;
-
-           if (!parseMatrix(e, t->matrix)) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else if (e.tagName() == "object") {
-           if (e.attribute("type") == "master") {
+        if (e.tagName() == "keyframe") {
+            if (!parseKeyFrame(e, tm, order)) {
+                return false;
+            }
+        } else if (e.tagName() == "object") {
+            if (e.attribute("type") == "master") {
                std::string masterName = e.attribute("name").toStdString();
                if (!m_objects[masterName]) {
                    std::cout << ERROR_AT(e) << "invalid master object reference: " << masterName << std::endl;
                    return false;
                }
                node->children.push_back(m_objects[masterName]);
-           } else if (e.attribute("type") == "tree") {
+            } else if (e.attribute("type") == "tree") {
                QDomNode subNode = e.firstChild();
                while (!subNode.isNull()) {
                    QDomElement e = subNode.toElement();
@@ -658,15 +831,19 @@ bool ScenefileReader::parseTransBlock(const QDomElement &transblock, SceneNode* 
                std::cout << ERROR_AT(e) << "invalid object type: " << e.attribute("type").toStdString() << std::endl;
                return false;
            }
-       } else if (!e.isNull()) {
+        } else if (!e.isNull()) {
            UNSUPPORTED_ELEMENT(e);
            return false;
-       }
-       childNode = childNode.nextSibling();
+        }
+        childNode = childNode.nextSibling();
    }
+
+   // TODO: Make the lamdas
 
    return true;
 }
+
+
 
 /**
 * Parse an <object type="primitive"> tag into node.

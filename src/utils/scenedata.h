@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <string>
+#include <functional>
+#include <map>
 
 #include <glm/glm.hpp>
 
@@ -41,6 +43,9 @@ struct SceneGlobalData  {
     float kd; // Diffuse term
     float ks; // Specular term
     float kt; // Transparency; used for extra credit (refraction)
+
+    int framerate; // The frames per second of the output movie
+    float duration; // The duration of the output movie in seconds
 };
 
 // Struct which contains data for a single light
@@ -137,17 +142,37 @@ struct ScenePrimitive {
 // Struct which contains data for a transformation.
 struct SceneTransformation {
     TransformationType type;
+
+    glm::vec3 translate;
+    glm::vec3 scale;
+    glm::vec3 rotate;
+    float angle;
+};
+
+using TransformationMap = std::map<std::string, std::vector<std::tuple<int, SceneTransformation*>>>;
+
+// Struct which contains data for a trnasformation over time
+struct InterpolatedSceneTransformation {
+    TransformationType type;
    
-    glm::vec3 translate; // Only applicable when translating. Defines t_x, t_y, and t_z, the amounts to translate by, along each axis.
-    glm::vec3 scale;     // Only applicable when scaling.     Defines s_x, s_y, and s_z, the amounts to scale by, along each axis.
-    glm::vec3 rotate;    // Only applicable when rotating.    Defines the axis of rotation; should be a unit vector.
-    float angle;         // Only applicable when rotating.    Defines the angle to rotate by in RADIANS, following the right-hand rule.
+
+    std::function<glm::vec3(int)> translate;
+    std::function<glm::vec3(int)> scale;
+    std::function<glm::vec3(int)> rotate;    // Only applicable when rotating.    Defines the axis of rotation; should be a unit vector.
+    std::function<float(int)> angle;         // Only applicable when rotating.    Defines the angle to rotate by in RADIANS, following the right-hand rule.
+
+//    glm::vec3 translate; // Only applicable when translating. Defines t_x, t_y, and t_z, the amounts to translate by, along each axis.
+//    glm::vec3 scale;     // Only applicable when scaling.     Defines s_x, s_y, and s_z, the amounts to scale by, along each axis.
+//    glm::vec3 rotate;
+//    float angle;
+
     glm::mat4 matrix;    // Only applicable when transforming by a custom matrix. This is that custom matrix.
 };
 
+
 // Struct which represents a node in the scene graph/tree, to be parsed by the student's `SceneParser`.
 struct SceneNode {
-   std::vector<SceneTransformation*> transformations; // Note the order of transformations described in lab 5
+   std::vector<InterpolatedSceneTransformation*> transformations; // Note the order of transformations described in lab 5
    std::vector<ScenePrimitive*>      primitives;
    std::vector<SceneNode*>           children;
 };
