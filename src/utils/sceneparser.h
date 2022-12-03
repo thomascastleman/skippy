@@ -25,9 +25,9 @@ public:
     // @param filepath    The path of the scene file to load.
     // @param renderData  On return, this will contain the metadata of the loaded scene.
     // @return            A boolean value indicating whether the parse was successful.
-    static bool parse(std::string filepath, RenderData &renderData);
+    static bool parse(std::string filepath, std::vector<RenderData*> &renderData);
 private:
-    static glm::mat4 buildTransformMatrix(SceneTransformation* transformation);
-    static void buildRenderShapes(SceneNode *node, std::vector<RenderShapeData> &shapes, glm::mat4 clm);
+    static glm::mat4 buildTransformMatrix(InterpolatedSceneTransformation* transformation, int frame);
+    static void buildRenderShapes(SceneNode *node, std::vector<RenderShapeData> &shapes, glm::mat4 clm, int frame);
 };
 

@@ -31,7 +31,9 @@ int main(int argc, char *argv[])
     QString iScenePath = settings.value("IO/scene").toString();
     QString oImagePath = settings.value("IO/output").toString();
 
-    RenderData metaData;
+    std::cout << "Parsing the scene" << std::endl;
+
+    std::vector<RenderData*> metaData;
     bool success = SceneParser::parse(iScenePath.toStdString(), metaData);
 
     if (!success) {
@@ -45,10 +47,6 @@ int main(int argc, char *argv[])
     int width = settings.value("Canvas/width").toInt();
     int height = settings.value("Canvas/height").toInt();
 
-    // Extracting data pointer from Qt's image API
-    QImage image = QImage(width, height, QImage::Format_RGBX8888);
-    image.fill(Qt::black);
-    RGBA *data = reinterpret_cast<RGBA *>(image.bits());
 
     // Setting up the raytracer
     RayTracer::Config rtConfig{};
@@ -66,21 +64,29 @@ int main(int argc, char *argv[])
 
     RayTracer raytracer{ rtConfig };
 
-    RayTraceScene rtScene{ width, height, metaData };
+    for (int i = 0; i < ceil(metaData[0]->globalData.duration * metaData[0]->globalData.framerate); i++) {
+        std::cout << "Rendering frame " << i << std::endl;
 
-    // Note that we're passing `data` as a pointer (to its first element)
-    // Recall from Lab 1 that you can access its elements like this: `data[i]`
-    raytracer.render(data, rtScene);
+        // Extracting data pointer from Qt's image API
+        QImage image = QImage(width, height, QImage::Format_RGBX8888);
+        image.fill(Qt::black);
+        RGBA *data = reinterpret_cast<RGBA *>(image.bits());
 
-    // Saving the image
-    success = image.save(oImagePath);
-    if (!success) {
-        success = image.save(oImagePath, "PNG");
-    }
-    if (success) {
-        std::cout << "Saved rendered image to \"" << oImagePath.toStdString() << "\"" << std::endl;
-    } else {
-        std::cerr << "Error: failed to save image to \"" << oImagePath.toStdString() << "\"" << std::endl;
+        RayTraceScene rtScene{ width, height, *metaData[i] };
+
+        // Note that we're passing `data` as a pointer (to its first element)
+        // Recall from Lab 1 that you can access its elements like this: `data[i]`
+        raytracer.render(data, rtScene);
+
+        std::cout << (oImagePath + QString::number(i) + ".png").toStdString() <<  std::endl;
+
+        success = image.save(oImagePath + QString::number(i) + ".png", "PNG");
+
+        if (success) {
+            std::cout << "Saved rendered image to \"" << oImagePath.toStdString() << "\"" << std::endl;
+        } else {
+            std::cerr << "Error: failed to save image to \"" << oImagePath.toStdString() << "\"" << std::endl;
+        }
     }
 
     a.exit();

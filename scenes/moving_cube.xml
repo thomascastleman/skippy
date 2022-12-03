@@ -4,8 +4,8 @@
 		<specularcoeff v="0.5"/>
 		<ambientcoeff v="0.5"/>
 
-    <framerate fps="24"/>
-    <duration seconds="2"/>
+    <framerate fps="10"/>
+    <duration seconds="1"/>
 	</globaldata>
 
 	<cameradata>
@@ -24,13 +24,12 @@
 
 	<object type="tree" name="root">
 		<transblock>
-
-      <keyframe type="fractional" key="0.5">
-        <translate x="3" y="0" z="0" />
-      </keyframe>
-      <keyframe type="fractional" key="1">
-        <translate x="0" y="0" z="0" />
-      </keyframe>
+			<keyframe type="frame" key="4">
+				<translate id="1" x="3" y="0" z="0" />
+			</keyframe>
+			<keyframe type="frame" key="9">
+				<translate id="1" x="0" y="0" z="0" />
+			</keyframe>
 
 			<object type="primitive" name="cube" >
 				<diffuse r="1" g="0" b="0"/>
@@ -41,4 +40,3 @@
 	</object>
 
 </scenefile>
-

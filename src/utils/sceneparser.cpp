@@ -11,16 +11,17 @@
  * @param transformation - A scene transformation object
  * @return A matric representing that transformation
  */
-glm::mat4 SceneParser::buildTransformMatrix(SceneTransformation* transformation) {
+glm::mat4 SceneParser::buildTransformMatrix(InterpolatedSceneTransformation* transformation, int frame) {
    switch (transformation->type) {
         case TransformationType::TRANSFORMATION_TRANSLATE:
-            return glm::translate(transformation->translate);
+            return glm::translate(transformation->translate(frame));
         case TransformationType::TRANSFORMATION_SCALE:
-            return glm::scale(transformation->scale);
+            return glm::scale(transformation->scale(frame));
         case TransformationType::TRANSFORMATION_ROTATE:
-            return glm::rotate(transformation->angle, transformation->rotate);
-        case TransformationType::TRANSFORMATION_MATRIX:
-            return transformation->matrix;
+            return glm::rotate(transformation->angle(frame), transformation->rotate(frame));
+        default:
+            std::cout << "ERROR: invalid transformation type" << std::endl;
+            exit(1);
    }
 }
 
@@ -30,11 +31,11 @@ glm::mat4 SceneParser::buildTransformMatrix(SceneTransformation* transformation)
  * @param shapes - A vector of shape data to be populated
  * @param ctm - The cumulative transformation matrix to this poitn
  */
-void SceneParser::buildRenderShapes(SceneNode *node, std::vector<RenderShapeData> &shapes, glm::mat4 ctm) {
+void SceneParser::buildRenderShapes(SceneNode *node, std::vector<RenderShapeData> &shapes, glm::mat4 ctm, int frame) {
     // multiply all the transforms on this node together
     glm::mat4 nodeTransform(1.0f); // start as identity matrixx
     for (auto *transform : node->transformations) {
-        nodeTransform = nodeTransform * buildTransformMatrix(transform);
+        nodeTransform = nodeTransform * buildTransformMatrix(transform, frame);
     }
 
     // update the cumulative transformation object
@@ -50,7 +51,7 @@ void SceneParser::buildRenderShapes(SceneNode *node, std::vector<RenderShapeData
 
     // recur on each child node
     for (auto *child : node->children) {
-        buildRenderShapes(child, shapes, ctm);
+        buildRenderShapes(child, shapes, ctm, frame);
     }
 
     return;
@@ -64,22 +65,34 @@ void SceneParser::buildRenderShapes(SceneNode *node, std::vector<RenderShapeData
  * @return true - success
  * @return false - failure
  */
-bool SceneParser::parse(std::string filepath, RenderData &renderData) {
+bool SceneParser::parse(std::string filepath, std::vector<RenderData*> &renderData) {
     ScenefileReader fileReader = ScenefileReader(filepath);
     bool success = fileReader.readXML();
+    std::cout << "Parsed file" << std::endl;
+
     if (!success) {
         return false;
     }
 
-    renderData.globalData = fileReader.getGlobalData();
-    renderData.lights = fileReader.getLights();
-    renderData.cameraData = fileReader.getCameraData();
+    SceneGlobalData globalData = fileReader.getGlobalData();
+    for (int i = 0; i < ceil(globalData.duration * globalData.framerate); i++) {
+        RenderData* rd = new RenderData();
 
-    // make sure shape data is cleared
-    renderData.shapes.clear();
+        rd->globalData = fileReader.getGlobalData();
+        rd->lights = fileReader.getLights();
+        rd->cameraData = fileReader.getCameraData();
 
-    // start at the root with an identity matrix
-    buildRenderShapes(fileReader.getRootNode(), renderData.shapes, glm::mat4(1.0f));
+
+        // make sure shape data is cleared
+        rd->shapes.clear();
+
+        // start at the root with an identity matrix
+        buildRenderShapes(fileReader.getRootNode(), rd->shapes, glm::mat4(1.0f), i);
+
+        renderData.push_back(rd);
+    }
+
+
 
     return true;
 }

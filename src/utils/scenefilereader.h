@@ -34,6 +34,11 @@ private:
     bool parseCameraData(const QDomElement &cameradata);
     bool parseLightData(const QDomElement &lightdata);
     bool parseObjectData(const QDomElement &object);
+
+    void interpolateTranslation(std::vector<std::tuple<int, SceneTransformation *> > &translations, SceneNode *node);
+    void interpolateScale(std::vector<std::tuple<int, SceneTransformation *> > &scales, SceneNode *node);
+    void interpolateRotation(std::vector<std::tuple<int, SceneTransformation *> > &rotations, SceneNode *node);
+
     bool parseKeyFrame(const QDomElement &keyFrame, TransformationMap& tm, std::vector<std::string>& order);
     bool parseTransBlock(const QDomElement &transblock, SceneNode* node);
     bool parsePrimitive(const QDomElement &prim, SceneNode* node);
@@ -44,4 +49,6 @@ private:
     SceneCameraData m_cameraData;
     std::vector<SceneLightData*> m_lights;
     std::vector<SceneNode*> m_nodes;
+
+
 };

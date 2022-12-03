@@ -82,6 +82,8 @@ SceneNode* ScenefileReader::getRootNode() const {
 
 // This is where it all goes down...
 bool ScenefileReader::readXML() {
+    std::cout << "Rading xml" << std::endl;
+
    // Read the file
    QFile file(file_name.c_str());
    if (!file.open(QFile::ReadOnly)) {
@@ -123,8 +125,10 @@ bool ScenefileReader::readXML() {
    while (!childNode.isNull()) {
        QDomElement e = childNode.toElement();
        if (e.tagName() == "globaldata") {
+           std::cout << "Parsing global data" << std::endl;
            if (!parseGlobalData(e))
                return false;
+           std::cout << "Finished parsing global data" << std::endl;
        } else if (e.tagName() == "lightdata") {
            if (!parseLightData(e))
                return false;
@@ -132,6 +136,7 @@ bool ScenefileReader::readXML() {
            if (!parseCameraData(e))
                return false;
        } else if (e.tagName() == "object") {
+           std::cout << "Parsing an object" << std::endl;
            if (!parseObjectData(e))
                return false;
        } else if (!e.isNull()) {
@@ -375,6 +380,7 @@ bool ScenefileReader::parseGlobalData(const QDomElement &globaldata) {
                return false;
            }
        }
+       childNode = childNode.nextSibling();
    }
 
    std::cout << m_globalData.framerate << ", " << m_globalData.duration << std::endl;
@@ -631,6 +637,8 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
     float key = keyFrame.attribute("key").toFloat();
     std::string type = keyFrame.attribute("type").toStdString();
 
+    std::cout << "Parsing a keyframe" << std::endl;
+
     int frame;
     if (type == "fractional") {
         frame = (int) ceil(key * ceil(m_globalData.framerate * m_globalData.duration));
@@ -648,21 +656,22 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
             std::string id;
             if (!parseQuadruple(e, id, t->translate.x, t->translate.y, t->translate.z, "id", "x", "y", "z")) {
                 PARSE_ERROR(e);
+                delete(t);
                 return false;
             }
 
             curOrder.push_back(id);
 
             if (tm.contains(id)) {
-               auto idTranslations = tm.at(id);
+               auto& idTranslations = tm.at(id);
                idTranslations.push_back({ frame, t });
             } else {
                tm.emplace(id, std::vector<std::tuple<int, SceneTransformation*>>());
-               auto idTranslations = tm.at(id);
+               auto& idTranslations = tm.at(id);
                if (frame != 0) {
                    SceneTransformation *defaultTranslate = new SceneTransformation();
-                   t->type = TransformationType::TRANSFORMATION_TRANSLATE;
-                   t->translate = glm::vec3(0.f);
+                   defaultTranslate->type = TransformationType::TRANSFORMATION_TRANSLATE;
+                   defaultTranslate->translate = glm::vec3(0.f);
 
                    idTranslations.push_back({ 0, defaultTranslate });
                }
@@ -677,6 +686,7 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
             float angle;
             if (!parseQuintuple(e, id, t->rotate.x, t->rotate.y, t->rotate.z, angle, "id", "x", "y", "z", "angle")) {
                 PARSE_ERROR(e);
+                delete(t);
                 return false;
             }
             // Convert to radians
@@ -685,16 +695,16 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
             curOrder.push_back(id);
 
             if (tm.contains(id)) {
-               auto idRotations = tm.at(id);
+               auto& idRotations = tm.at(id);
                idRotations.push_back({ frame, t });
             } else {
                tm.emplace(id, std::vector<std::tuple<int, SceneTransformation*>>());
-               auto idRotations= tm.at(id);
+               auto& idRotations= tm.at(id);
                if (frame != 0) {
                    SceneTransformation *defaultRotate = new SceneTransformation();
-                   t->type = TransformationType::TRANSFORMATION_ROTATE;
-                   t->rotate = glm::vec3{ 0.f, 1.f, 0.f };
-                   t->angle = 0;
+                   defaultRotate->type = TransformationType::TRANSFORMATION_ROTATE;
+                   defaultRotate->rotate = glm::vec3{ 0.f, 1.f, 0.f };
+                   defaultRotate->angle = 0;
 
                    idRotations.push_back({ 0, defaultRotate });
                }
@@ -707,21 +717,22 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
             std::string id;
             if (!parseQuadruple(e, id, t->scale.x, t->scale.y, t->scale.z, "id", "x", "y", "z")) {
                 PARSE_ERROR(e);
+                delete(t);
                 return false;
             }
 
             curOrder.push_back(id);
 
             if (tm.contains(id)) {
-               auto idTranslations = tm.at(id);
+               auto& idTranslations = tm.at(id);
                idTranslations.push_back({ frame, t });
             } else {
                tm.emplace(id, std::vector<std::tuple<int, SceneTransformation*>>());
-               auto idTranslations = tm.at(id);
+               auto& idTranslations = tm.at(id);
                if (frame != 0) {
                    SceneTransformation *defaultScale = new SceneTransformation();
-                   t->type = TransformationType::TRANSFORMATION_SCALE;
-                   t->scale = glm::vec3{ 1.f, 1.f, 1.f };
+                   defaultScale->type = TransformationType::TRANSFORMATION_SCALE;
+                   defaultScale->scale = glm::vec3{ 1.f, 1.f, 1.f };
 
                    idTranslations.push_back({ 0, defaultScale});
                }
@@ -730,6 +741,8 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
         } else if (e.tagName() == "matrix") {
             return false;
         }
+
+        childNode = childNode.nextSibling();
     }
 
     int sizeWithDups = curOrder.size();
@@ -763,10 +776,218 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
         return false;
     }
 
+    std::vector<std::string> newOrder;
+
+    int prevIndex = 0;
+    int curIndex = 0;
+
+    std::vector<std::string> toInsert;
+
+    std::cout << "Entering loop of doom" << std::endl;
+    bool finished = false;
+    while (!finished) {
+//        std::cout << "Cur Index " << curIndex << std::endl;
+//        std::cout << "Cur Order Size" << curOrder.size() << std::endl;
+//        std::cout << "Prev Index " << prevIndex << std::endl;
+//        std::cout << "Prev Order Size " << prevOrder.size() << std::endl;
+
+        if (prevIndex >= prevOrder.size()) {
+            for (int i = curIndex; i < curOrder.size(); i++) {
+                newOrder.push_back(curOrder.at(i));
+            }
+            finished = true;
+            continue;
+        }
+
+        if (curIndex >= curOrder.size()) {
+            for (int i = prevIndex; i < prevOrder.size(); i++) {
+                newOrder.push_back(prevOrder.at(i));
+            }
+            finished = true;
+            continue;
+        }
+
+        std::string& curId = curOrder.at(curIndex);
+
+        if (curId == prevOrder.at(prevIndex)) {
+            newOrder.push_back(curId);
+            prevIndex++;
+            curIndex++;
+            continue;
+        }
+
+        bool foundMatch = false;
+        int prevOrderMatchIndex = 0;
+        for (int i = prevIndex + 1; i < prevOrder.size(); i++) {
+            if (curId == prevOrder.at(i)) {
+                foundMatch = true;
+                prevOrderMatchIndex = i;
+            }
+        }
+
+        if (!foundMatch) {
+            toInsert.push_back(curId);
+            curIndex++;
+        }
+
+        if (foundMatch) {
+            for (int i = prevIndex; i < prevOrderMatchIndex; i++) {
+                newOrder.push_back(prevOrder.at(i));
+            }
+
+            for (int i = 0; i < toInsert.size(); i++) {
+                newOrder.push_back(toInsert.at(i));
+            }
+
+            newOrder.push_back(prevOrder.at(prevOrderMatchIndex));
+
+            curIndex++;
+            prevIndex = prevOrderMatchIndex + 1;
+        }
+    }
+
+
+    std::cout << "HERE" << std::endl;
+
     prevOrder.clear();
-    std::copy(curOrder.begin(), curOrder.end(), prevOrder.begin());
+    for (int i = 0; i < newOrder.size(); i++) {
+        prevOrder.push_back(newOrder[i]);
+    }
 
     return true;
+}
+
+float linearInterpolate(int frame, int startingFrame, int endingFrame, float start, float end) {
+    int frameDiff = endingFrame - startingFrame;
+    float between = (frame - startingFrame) / (float) frameDiff;
+
+//    std::cout << start + between * (end - start) << std::endl;
+
+    return start + between * (end - start);
+}
+
+void ScenefileReader::interpolateTranslation(std::vector<std::tuple<int, SceneTransformation*>> &translations, SceneNode *node) {
+    auto translate = [=](int f){
+        for (int i = 0; i < translations.size(); i++) {
+            auto [startingFrame, startingTranslation] = translations[i];
+            if (f >= startingFrame) {
+                if (i == translations.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingTranslation
+                    return startingTranslation->translate;
+                } else {
+                    auto [endingFrame, endingTranslation] = translations[i + 1];
+                    if (f < endingFrame) {
+                        std::cout << endingTranslation->translate.x << std::endl;
+                        // Interpolate between startingTranslation and endingTranslation
+                        return glm::vec3(
+                                    linearInterpolate(f, startingFrame, endingFrame, startingTranslation->translate.x, endingTranslation->translate.x),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingTranslation->translate.y, endingTranslation->translate.y),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingTranslation->translate.z, endingTranslation->translate.z));
+                    }
+                }
+            }
+
+
+        }
+
+        std::cout << "ERROR: frame unreachable" << std::endl;
+        exit(1);
+    };
+
+    InterpolatedSceneTransformation *t = new InterpolatedSceneTransformation();
+    t->type = TransformationType::TRANSFORMATION_TRANSLATE;
+    t->translate = translate;
+
+    node->transformations.push_back(t);
+}
+
+void ScenefileReader::interpolateScale(std::vector<std::tuple<int, SceneTransformation*>> &scales, SceneNode *node) {
+    auto scale = [=](int f){
+        for (int i = 0; i < scales.size(); i++) {
+            auto [startingFrame, startingScale] = scales[i];
+
+            if (f >= startingFrame) {
+                if (i == scales.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingScale
+                    return startingScale->scale;
+                } else {
+                    auto [endingFrame, endingScale] = scales[i + 1];
+                    if (f < endingFrame) {
+                        // Interpolate between startingScale and endingScale
+                        return glm::vec3(
+                                    linearInterpolate(f, startingFrame, endingFrame, startingScale->scale.x, endingScale->scale.x),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingScale->scale.y, endingScale->scale.y),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingScale->scale.z, endingScale->scale.z));
+                    }
+                }
+            }
+        }
+
+        std::cout << "ERROR: frame unreachable" << std::endl;
+        exit(1);
+    };
+
+    InterpolatedSceneTransformation *t = new InterpolatedSceneTransformation();
+    t->type = TransformationType::TRANSFORMATION_SCALE;
+    t->scale = scale;
+
+    node->transformations.push_back(t);
+}
+
+void ScenefileReader::interpolateRotation(std::vector<std::tuple<int, SceneTransformation*>> &rotations, SceneNode *node) {
+    auto rotate = [=](int f){
+        for (int i = 0; i < rotations.size(); i++) {
+            auto [startingFrame, startingRotation] = rotations[i];
+
+            if (f >= startingFrame) {
+                if (i == rotations.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingScale
+                    return startingRotation->rotate;
+                } else {
+                    auto [endingFrame, endingRotation] = rotations[i + 1];
+                    if (f < endingFrame) {
+                        // Interpolate between startingrotation and endingrotation
+                        return glm::vec3(
+                                    linearInterpolate(f, startingFrame, endingFrame, startingRotation->rotate.x, endingRotation->rotate.x),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingRotation->rotate.y, endingRotation->rotate.y),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingRotation->rotate.z, endingRotation->rotate.z));
+                    }
+                }
+            }
+        }
+
+        std::cout << "ERROR: frame unreachable" << std::endl;
+        exit(1);
+    };
+
+    auto angle = [=](int f){
+        for (int i = 0; i < rotations.size(); i++) {
+            auto [startingFrame, startingRotation] = rotations[i];
+
+            if (f >= startingFrame) {
+                if (i == rotations.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingScale
+                    return startingRotation->angle;
+                } else {
+                    auto [endingFrame, endingRotation] = rotations[i + 1];
+                    if (f < endingFrame) {
+                        // Interpolate between startingrotation and endingrotation
+                        return linearInterpolate(f, startingFrame, endingFrame, startingRotation->angle, endingRotation->angle);
+                    }
+                }
+            }
+        }
+
+        std::cout << "ERROR: frame unreachable" << std::endl;
+        exit(1);
+    };
+
+    InterpolatedSceneTransformation *t = new InterpolatedSceneTransformation();
+    t->type = TransformationType::TRANSFORMATION_ROTATE;
+    t->rotate = rotate;
+    t->angle = angle;
+
+    node->transformations.push_back(t);
 }
 
 /**
@@ -786,13 +1007,14 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
 bool ScenefileReader::parseTransBlock(const QDomElement &transblock, SceneNode* node) {
    // Iterate over child elements
    QDomNode childNode = transblock.firstChild();
+   std::vector<std::string> order;
+   TransformationMap tm = TransformationMap();
+
+   std::cout << "Parsing the transblock" << std::endl;
+
    while (!childNode.isNull()) {
        QDomElement e = childNode.toElement();
-
-       std::vector<std::string> order;
-       TransformationMap tm = TransformationMap();
-
-        if (e.tagName() == "keyframe") {
+       if (e.tagName() == "keyframe") {
             if (!parseKeyFrame(e, tm, order)) {
                 return false;
             }
@@ -838,7 +1060,27 @@ bool ScenefileReader::parseTransBlock(const QDomElement &transblock, SceneNode* 
         childNode = childNode.nextSibling();
    }
 
-   // TODO: Make the lamdas
+   for (std::string& id : order) {
+       std::vector<std::tuple<int, SceneTransformation*>> transformationsToInterpolate = tm.at(id);
+
+       assert(transformationsToInterpolate.size() != 0);
+       auto [frame, transformation] = transformationsToInterpolate[0];
+
+       switch (transformation->type) {
+       case TransformationType::TRANSFORMATION_TRANSLATE:
+           interpolateTranslation(transformationsToInterpolate, node);
+           break;
+       case TransformationType::TRANSFORMATION_SCALE:
+           interpolateScale(transformationsToInterpolate, node);
+           break;
+       case TransformationType::TRANSFORMATION_ROTATE:
+           interpolateRotation(transformationsToInterpolate, node);
+           break;
+       default:
+           std::cout << "Invalid transformation type" << std::endl;
+           return false;
+       }
+   }
 
    return true;
 }
