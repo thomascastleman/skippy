@@ -2,6 +2,7 @@
 #include <QCommandLineParser>
 #include <QImage>
 #include <QtCore>
+#include <QtConcurrent>
 
 #include <iostream>
 #include "utils/sceneparser.h"
@@ -62,32 +63,50 @@ int main(int argc, char *argv[])
     rtConfig.enableAcceleration  = settings.value("Feature/acceleration").toBool();
     rtConfig.enableDepthOfField  = settings.value("Feature/depthoffield").toBool();
 
-    RayTracer raytracer{ rtConfig };
-
-    for (int i = 0; i < ceil(metaData[0]->globalData.duration * metaData[0]->globalData.framerate); i++) {
-        std::cout << "Rendering frame " << i << std::endl;
+    auto renderFrame = [&](int frame) {
+        std::cout << "Rendering frame " << frame << std::endl;
 
         // Extracting data pointer from Qt's image API
         QImage image = QImage(width, height, QImage::Format_RGBX8888);
         image.fill(Qt::black);
         RGBA *data = reinterpret_cast<RGBA *>(image.bits());
 
-        RayTraceScene rtScene{ width, height, *metaData[i] };
+        RayTracer raytracer{ rtConfig };
+        RayTraceScene rtScene{ width, height, *metaData[frame] };
 
         // Note that we're passing `data` as a pointer (to its first element)
         // Recall from Lab 1 that you can access its elements like this: `data[i]`
         raytracer.render(data, rtScene);
 
-        std::cout << (oImagePath + QString::number(i) + ".png").toStdString() <<  std::endl;
+        QString number = QStringLiteral("%1").arg(frame, 5, 10, QLatin1Char('0'));
+        std::cout << (oImagePath + number + ".png").toStdString() <<  std::endl;
 
-        success = image.save(oImagePath + QString::number(i) + ".png", "PNG");
+        bool success = image.save(oImagePath + number + ".png", "PNG");
 
         if (success) {
             std::cout << "Saved rendered image to \"" << oImagePath.toStdString() << "\"" << std::endl;
         } else {
             std::cerr << "Error: failed to save image to \"" << oImagePath.toStdString() << "\"" << std::endl;
         }
-    }
+
+        return;
+    };
+
+
+
+//    if (rtConfig.enableParallelism) {
+//        std::vector<int> frameNums;
+//        for (int i = 0; i < ceil(metaData[0]->globalData.duration * metaData[0]->globalData.framerate); i++) {
+//            frameNums.push_back(i);
+//        }
+
+//        QtConcurrent::blockingMap(frameNums, renderFrame);
+//    } else {
+        // otherwise just use on single thread.
+        for (int i = 0; i < ceil(metaData[0]->globalData.duration * metaData[0]->globalData.framerate); i++) {
+            renderFrame(i);
+        }
+//    }
 
     a.exit();
     return 0;
