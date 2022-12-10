@@ -32,7 +32,7 @@ private:
     // If you want to parse a new file, instantiate a different parser.
     bool parseGlobalData(const QDomElement &globaldata);
     bool parseCameraData(const QDomElement &cameradata);
-    bool parseLightData(const QDomElement &lightdata);
+    bool parseLightData(const QDomElement &lightdata, SceneNode *node);
     bool parseObjectData(const QDomElement &object);
 
     void interpolateTranslation(std::vector<std::tuple<int, SceneTransformation *> > &translations, SceneNode *node);

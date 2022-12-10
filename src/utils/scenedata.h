@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <map>
+#include <optional>
 
 #include <glm/glm.hpp>
 
@@ -66,6 +67,20 @@ struct SceneLightData {
     float width, height; // No longer supported (area lights)
 };
 
+// Light capable of interpolating between most of its parameter values
+struct InterpolatedSceneLightData {
+    int id;
+    LightType type;
+
+    std::function<SceneColor(int)> color;
+    std::function<glm::vec3(int)> function;
+
+    std::function<glm::vec4(int)> dir;
+
+    std::function<float(int)> penumbra;
+    std::function<float(int)> angle;
+};
+
 // Struct which contains data for the camera of a scene
 struct SceneCameraData {
     glm::vec4 pos;
@@ -76,6 +91,13 @@ struct SceneCameraData {
 
     float aperture;      // Only applicable for depth of field
     float focalLength;   // Only applicable for depth of field
+};
+
+// Camera which can interpolate between its parameters.
+struct InterpolatedCameraData {
+    std::function<glm::vec4(int)> look;
+    std::function<glm::vec4(int)> up;
+    std::function<float(int)> heightAngle;
 };
 
 // Struct which contains data for texture mapping files
@@ -155,26 +177,20 @@ using TransformationMap = std::map<std::string, std::vector<std::tuple<int, Scen
 // Struct which contains data for a trnasformation over time
 struct InterpolatedSceneTransformation {
     TransformationType type;
-   
 
     std::function<glm::vec3(int)> translate;
     std::function<glm::vec3(int)> scale;
     std::function<glm::vec3(int)> rotate;    // Only applicable when rotating.    Defines the axis of rotation; should be a unit vector.
     std::function<float(int)> angle;         // Only applicable when rotating.    Defines the angle to rotate by in RADIANS, following the right-hand rule.
 
-//    glm::vec3 translate; // Only applicable when translating. Defines t_x, t_y, and t_z, the amounts to translate by, along each axis.
-//    glm::vec3 scale;     // Only applicable when scaling.     Defines s_x, s_y, and s_z, the amounts to scale by, along each axis.
-//    glm::vec3 rotate;
-//    float angle;
-
     glm::mat4 matrix;    // Only applicable when transforming by a custom matrix. This is that custom matrix.
 };
-
 
 // Struct which represents a node in the scene graph/tree, to be parsed by the student's `SceneParser`.
 struct SceneNode {
    std::vector<InterpolatedSceneTransformation*> transformations; // Note the order of transformations described in lab 5
-   std::vector<ScenePrimitive*>      primitives;
-   std::vector<SceneNode*>           children;
+   std::vector<ScenePrimitive*>      			 primitives;
+   std::vector<InterpolatedSceneLightData*> 	 lights;
+   std::vector<SceneNode*>           			 children;
+   std::optional<InterpolatedCameraData*>		 camera;
 };
-

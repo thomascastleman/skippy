@@ -129,12 +129,6 @@ bool ScenefileReader::readXML() {
            if (!parseGlobalData(e))
                return false;
            std::cout << "Finished parsing global data" << std::endl;
-       } else if (e.tagName() == "lightdata") {
-           if (!parseLightData(e))
-               return false;
-       } else if (e.tagName() == "cameradata") {
-           if (!parseCameraData(e))
-               return false;
        } else if (e.tagName() == "object") {
            std::cout << "Parsing an object" << std::endl;
            if (!parseObjectData(e))
@@ -388,42 +382,39 @@ bool ScenefileReader::parseGlobalData(const QDomElement &globaldata) {
    return true;
 }
 
-/**
-* Parse a <lightdata> tag and add a new CS123SceneLightData to m_lights.
-*/
-bool ScenefileReader::parseLightData(const QDomElement &lightdata) {
-   // Create a default light
-   SceneLightData* light = new SceneLightData();
-   m_lights.push_back(light);
-   memset(light, 0, sizeof(SceneLightData));
-   light->pos = glm::vec4(3.f, 3.f, 3.f, 1.f);
-   light->dir = glm::vec4(0.f, 0.f, 0.f, 0.f);
-   light->color.r = light->color.g = light->color.b = 1;
-   light->function = glm::vec3(1, 0, 0);
+bool ScenefileReader::parseLightKeyframe(const QDomElement &keyFrame, std::vector<std::tuple<int, SceneLightData *>> &lightAtKeyFrame, LightType lightType) {
+    QDomNode childNode = keyFrame.firstChild();
+    float key = keyFrame.attribute("key").toFloat();
+    std::string type = keyFrame.attribute("type").toStdString();
 
-   // Iterate over child elements
-   QDomNode childNode = lightdata.firstChild();
-   while (!childNode.isNull()) {
-       QDomElement e = childNode.toElement();
-       if (e.tagName() == "id") {
-           if (!parseInt(e, light->id, "v")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else if (e.tagName() == "type") {
-           if (!e.hasAttribute("v")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-           if (e.attribute("v") == "directional") light->type = LightType::LIGHT_DIRECTIONAL;
-           else if (e.attribute("v") == "point") light->type = LightType::LIGHT_POINT;
-           else if (e.attribute("v") == "spot") light->type = LightType::LIGHT_SPOT;
-           else if (e.attribute("v") == "area") light->type = LightType::LIGHT_AREA;
-           else {
-               std::cout << ERROR_AT(e) << "unknown light type " << e.attribute("v").toStdString() << std::endl;
-               return false;
-           }
-       } else if (e.tagName() == "color") {
+    std::cout << "Parsing a light keyframe" << std::endl;
+
+    int frame;
+    if (type == "fractional") {
+        frame = (int) ceil(key * ceil(m_globalData.framerate * m_globalData.duration));
+    } else {
+        frame = (int) key;
+    }
+
+    SceneLightData *previousLight = lightAtKeyFrame.empty() ? NULL : std::get<1>(lightAtKeyFrame.back());
+    SceneLightData *light = new SceneLightData();
+
+    if (previousLight != NULL) {
+        memcpy(light, previousLight, sizeof(SceneLightData));
+    } else {
+        light->type = lightType;
+    }
+
+    bool setColor = false;
+    bool setFunction = false;
+    bool setDirection = false;
+    bool setPenumbra = false;
+    bool setAngle = false;
+
+    while (!childNode.isNull()) {
+        QDomElement e = childNode.toElement();
+
+       if (e.tagName() == "color") {
            if (!parseColor(e, light->color)) {
                PARSE_ERROR(e);
                return false;
@@ -495,10 +486,96 @@ bool ScenefileReader::parseLightData(const QDomElement &lightdata) {
                PARSE_ERROR(e);
                return false;
            }
-       } else if (!e.isNull()) {
-           UNSUPPORTED_ELEMENT(e);
+       } else {
            return false;
        }
+
+        childNode = childNode.nextSibling();
+    }
+
+    if (previousLight == NULL) {
+        bool initializedAll = setColor;
+
+        switch (lightType) {
+        case LightType::LIGHT_POINT:
+            initializedAll &= setFunction;
+            break;
+        case LightType::LIGHT_DIRECTIONAL:
+            initializedAll &= setDirection;
+            break;
+        case LightType::LIGHT_SPOT:
+            initializedAll &= setFunction && setDirection && setPenumbra && setAngle;
+            break;
+        default:
+            std::cerr << "Invalid light type in parsing light keyframe: " << unsigned(lightType) << std::endl;
+            PARSE_ERROR(keyFrame);
+            return false;
+        }
+
+        if (!initializedAll) {
+            std::cerr << "Light not fully initialized" << std::endl;
+            PARSE_ERROR(keyFrame);
+            return false;
+        }
+    }
+
+    lightAtKeyFrame.push_back({frame, light});
+}
+
+/**
+* Parse a <lightdata> tag and add a new CS123SceneLightData to m_lights.
+*/
+bool ScenefileReader::parseLightData(const QDomElement &lightdata, SceneNode *node) {
+   // Create a default light
+   InterpolatedSceneLightData* light = new InterpolatedSceneLightData();
+
+   node->lights.push_back(light);
+   memset(light, 0, sizeof(InterpolatedSceneLightData));
+
+//   light->dir = glm::vec4(0.f, 0.f, 0.f, 0.f);
+//   light->color.r = light->color.g = light->color.b = 1;
+//   light->function = glm::vec3(1, 0, 0);
+
+   if (!lightdata.hasAttribute("id")) {
+       std::cerr << "You must supply an ID for your light" << std::endl;
+       PARSE_ERROR(lightdata);
+       return false;
+   }
+   light->id = lightdata.attribute("id").toInt();
+
+   if (!lightdata.hasAttribute("type")) {
+       std::cerr << "You must supply a type for your light" << std::endl;
+       PARSE_ERROR(lightdata);
+       return false;
+   }
+   std::string lightTypeString = lightdata.attribute("type").toStdString();
+   if (lightTypeString == "directional") {
+       light->type = LightType::LIGHT_DIRECTIONAL;
+   } else if (lightTypeString == "point") {
+       light->type = LightType::LIGHT_POINT;
+   } else if (lightTypeString == "spot") {
+       light->type = LightType::LIGHT_SPOT;
+   } else {
+       std::cerr << "Invalid light type: " << lightTypeString << std::endl;
+       PARSE_ERROR(lightdata);
+       return false;
+   }
+
+   // Iterate over child elements
+   QDomNode childNode = lightdata.firstChild();
+   while (!childNode.isNull()) {
+       QDomElement e = childNode.toElement();
+
+       if (e.tagName() == "keyframe") {
+           if (!parseLightKeyframe(e)) {
+               PARSE_ERROR(e);
+               return false;
+           } else if (!e.isNull()) {
+                UNSUPPORTED_ELEMENT(e);
+                return false;
+           }
+       }
+
        childNode = childNode.nextSibling();
    }
 
@@ -1053,6 +1130,12 @@ bool ScenefileReader::parseTransBlock(const QDomElement &transblock, SceneNode* 
                std::cout << ERROR_AT(e) << "invalid object type: " << e.attribute("type").toStdString() << std::endl;
                return false;
            }
+       } else if (e.tagName() == "lightdata") {
+           if (!parseLightData(e, node))
+               return false;
+       } else if (e.tagName() == "cameradata") {
+           if (!parseCameraData(e, node))
+               return false;
         } else if (!e.isNull()) {
            UNSUPPORTED_ELEMENT(e);
            return false;
