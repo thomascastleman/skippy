@@ -63,6 +63,9 @@ int main(int argc, char *argv[])
     rtConfig.enableAcceleration  = settings.value("Feature/acceleration").toBool();
     rtConfig.enableDepthOfField  = settings.value("Feature/depthoffield").toBool();
 
+    // Create a directory for the frames to go in
+    QDir().mkdir(oImagePath);
+
     auto renderFrame = [&](int frame) {
         std::cout << "Rendering frame " << frame << std::endl;
 
@@ -78,15 +81,15 @@ int main(int argc, char *argv[])
         // Recall from Lab 1 that you can access its elements like this: `data[i]`
         raytracer.render(data, rtScene);
 
+        // Save frame as its own PNG image with a frame number in the file name
         QString number = QStringLiteral("%1").arg(frame, 5, 10, QLatin1Char('0'));
-        std::cout << (oImagePath + number + ".png").toStdString() <<  std::endl;
-
-        bool success = image.save(oImagePath + number + ".png", "PNG");
+        QString framePath = oImagePath + "/frame" + number + ".png";
+        bool success = image.save(framePath, "PNG");
 
         if (success) {
-            std::cout << "Saved rendered image to \"" << oImagePath.toStdString() << "\"" << std::endl;
+            std::cout << "Saved rendered image to \"" << framePath.toStdString() << "\"" << std::endl;
         } else {
-            std::cerr << "Error: failed to save image to \"" << oImagePath.toStdString() << "\"" << std::endl;
+            std::cerr << "Error: failed to save image to \"" << framePath.toStdString() << "\"" << std::endl;
         }
 
         return;

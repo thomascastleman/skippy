@@ -1,0 +1,18 @@
+#!/bin/bash
+
+SCENEFILE=$(cat QSettings.ini | grep "scene = " | sed 's/scene =//' | sed 's/^[[:space:]]*//')
+OUTPUT_DIR=$(cat QSettings.ini | grep "output = " | sed 's/output =//' | sed 's/^[[:space:]]*//')
+FRAMERATE=$(cat $SCENEFILE | grep "framerate" | sed 's/^[[:space:]]*<framerate fps="//' | sed 's/"\/>[[:space:]]*//')
+BUILD_DIR=$(find .. -type d -regex ".*/build-skippy-.*-Release$")
+EXECUTABLE="$BUILD_DIR/skippy"
+
+echo "Using scenefile \"$SCENEFILE\""
+echo "Using output directory \"$OUTPUT_DIR\""
+echo "Using executable \"$EXECUTABLE\""
+echo "Using framerate $FRAMERATE"
+
+# Invoke raytracer
+./$EXECUTABLE QSettings.ini
+
+# Invoke ffmpeg to create an MP4 file
+ffmpeg -framerate $FRAMERATE -pattern_type glob -i "$OUTPUT_DIR/*.png" -c:v libx264 -pix_fmt yuv420p $OUTPUT_DIR/video.mp4
