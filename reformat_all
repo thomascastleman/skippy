@@ -1,0 +1,9 @@
+#!/bin/bash
+
+FILES_TO_REFORMAT=$(find src/ -regex '.*/.*\.\(c\(pp\)?\|h\(pp\)?\)$')
+
+echo "Reformatting:"
+echo "$FILES_TO_REFORMAT"
+
+clang-format -i -style='{ BasedOnStyle: LLVM, UseTab: Never, AllowShortBlocksOnASingleLine: true, AllowShortLoopsOnASingleLine: true, IndentWidth: 4, TabWidth: 4, BreakBeforeBraces: Allman, AllowShortIfStatementsOnASingleLine: false, IndentCaseLabels: false, ColumnLimit: 100, AccessModifierOffset: -4 }' $FILES_TO_REFORMAT
+
