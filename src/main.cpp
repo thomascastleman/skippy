@@ -99,16 +99,16 @@ int main(int argc, char *argv[])
 
 //    if (rtConfig.enableParallelism) {
 //        std::vector<int> frameNums;
-//        for (int i = 0; i < ceil(metaData[0]->globalData.duration * metaData[0]->globalData.framerate); i++) {
+//        for (int i = 0; i < metaData[0]->globalData.numFrames; i++) {
 //            frameNums.push_back(i);
 //        }
 
 //        QtConcurrent::blockingMap(frameNums, renderFrame);
 //    } else {
         // otherwise just use on single thread.
-        for (int i = 0; i < ceil(metaData[0]->globalData.duration * metaData[0]->globalData.framerate); i++) {
-            renderFrame(i);
-        }
+    for (int i = 0; i < metaData[0]->globalData.numFrames; i++) {
+        renderFrame(i);
+    }
 //    }
 
     a.exit();

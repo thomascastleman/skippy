@@ -75,7 +75,7 @@ bool SceneParser::parse(std::string filepath, std::vector<RenderData*> &renderDa
     }
 
     SceneGlobalData globalData = fileReader.getGlobalData();
-    for (int i = 0; i < ceil(globalData.duration * globalData.framerate); i++) {
+    for (int i = 0; i < globalData.numFrames; i++) {
         RenderData* rd = new RenderData();
 
         rd->globalData = fileReader.getGlobalData();

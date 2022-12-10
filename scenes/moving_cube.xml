@@ -15,13 +15,6 @@
 		<heightangle v="30"/>
 	</cameradata>
 
-	<lightdata>
-		<id v="0"/>
-		<color r="1" g="1" b="1"/>
-		<type v="directional"/>
-		<direction x="-3" y="-2" z="-1"/>
-	</lightdata>
-
 	<object type="tree" name="root">
 		<transblock>
 			<keyframe type="fractional" key="0.5">
@@ -39,6 +32,16 @@
 				<specular r="1.0" g="1.0" b="1.0"/>
 				<shininess v="25.0"/>
 			</object>
+
+			<lightdata>
+				<id v="0"/>
+				<type v="directional"/>
+
+				<keyframe type="frame" key="0">
+					<color r="1" g="1" b="1"/>
+					<direction x="-3" y="-2" z="-1"/>
+				</keyframe>
+			</lightdata>
 		</transblock>
 	</object>
 

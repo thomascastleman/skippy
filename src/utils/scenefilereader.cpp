@@ -383,7 +383,7 @@ bool ScenefileReader::parseGlobalData(const QDomElement &globaldata) {
        childNode = childNode.nextSibling();
    }
 
-   std::cout << m_globalData.framerate << ", " << m_globalData.duration << std::endl;
+    m_globalData.numFrames = (int) ceil(m_globalData.duration * m_globalData.framerate);
 
    return true;
 }
@@ -641,7 +641,7 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
 
     int frame;
     if (type == "fractional") {
-        frame = (int) ceil(key * ceil(m_globalData.framerate * m_globalData.duration));
+        frame = (int) ceil(key * m_globalData.numFrames);
     } else {
         frame = (int) key;
     }

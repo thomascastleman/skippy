@@ -46,6 +46,7 @@ struct SceneGlobalData  {
 
     int framerate; // The frames per second of the output movie
     float duration; // The duration of the output movie in seconds
+    int numFrames;
 };
 
 // Struct which contains data for a single light
