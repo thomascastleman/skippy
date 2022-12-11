@@ -15,4 +15,4 @@ echo "Using framerate $FRAMERATE"
 ./$EXECUTABLE QSettings.ini
 
 # Invoke ffmpeg to create an MP4 file
-ffmpeg -framerate $FRAMERATE -pattern_type glob -i "$OUTPUT_DIR/*.png" -c:v libx264 -pix_fmt yuv420p $OUTPUT_DIR/video.mp4
+ffmpeg -framerate $FRAMERATE -pattern_type glob -i "$OUTPUT_DIR/*.png" -c:v libx264 -crf 10 -pix_fmt yuv420p $OUTPUT_DIR/video.mp4

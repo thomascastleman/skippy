@@ -22,20 +22,13 @@ ScenefileReader::ScenefileReader(const std::string& name)
 {
    file_name = name;
 
-   memset(&m_cameraData, 0, sizeof(SceneCameraData));
    memset(&m_globalData, 0, sizeof(SceneGlobalData));
    m_objects.clear();
-   m_lights.clear();
    m_nodes.clear();
 }
 
 ScenefileReader::~ScenefileReader()
 {
-   std::vector<SceneLightData*>::iterator lights;
-   for (lights = m_lights.begin(); lights != m_lights.end(); lights++) {
-       delete *lights;
-   }
-
    // Delete all Scene Nodes
    for (unsigned int node = 0; node < m_nodes.size(); node++) {
        for (size_t i = 0; i < (m_nodes[node])->transformations.size(); i++) {
@@ -51,26 +44,11 @@ ScenefileReader::~ScenefileReader()
    }
 
    m_nodes.clear();
-   m_lights.clear();
    m_objects.clear();
 }
 
 SceneGlobalData ScenefileReader::getGlobalData() const {
    return m_globalData;
-}
-
-SceneCameraData ScenefileReader::getCameraData() const {
-   return m_cameraData;
-}
-
-std::vector<SceneLightData> ScenefileReader::getLights() const {
-   std::vector<SceneLightData> ret{};
-   ret.reserve(m_lights.size());
-
-   for (auto light : m_lights) {
-       ret.emplace_back(*light);
-   }
-   return ret;
 }
 
 SceneNode* ScenefileReader::getRootNode() const {
@@ -109,12 +87,6 @@ bool ScenefileReader::readXML() {
        return false;
    }
 
-   // Default camera
-   m_cameraData.pos = glm::vec4(5.f, 5.f, 5.f, 1.f);
-   m_cameraData.up = glm::vec4(0.f, 1.f, 0.f, 0.f);
-   m_cameraData.look = glm::vec4(-1.f, -1.f, -1.f, 0.f);
-   m_cameraData.heightAngle = 45 * M_PI / 180.f;
-
    // Default global data
    m_globalData.ka = 0.5f;
    m_globalData.kd = 0.5f;
@@ -138,6 +110,11 @@ bool ScenefileReader::readXML() {
            return false;
        }
        childNode = childNode.nextSibling();
+   }
+
+   if (!foundCamera) {
+       std::cout << "ERROR: Scene must have a camera" << std::endl;
+       return false;
    }
 
    std::cout << "Finished reading " << file_name << std::endl;
@@ -382,7 +359,7 @@ bool ScenefileReader::parseGlobalData(const QDomElement &globaldata) {
    return true;
 }
 
-bool ScenefileReader::parseLightKeyframe(const QDomElement &keyFrame, std::vector<std::tuple<int, SceneLightData *>> &lightAtKeyFrame, LightType lightType) {
+bool ScenefileReader::parseLightKeyFrame(const QDomElement &keyFrame, SceneLightKeyFrameData &lightKeyFrameData) {
     QDomNode childNode = keyFrame.firstChild();
     float key = keyFrame.attribute("key").toFloat();
     std::string type = keyFrame.attribute("type").toStdString();
@@ -391,18 +368,9 @@ bool ScenefileReader::parseLightKeyframe(const QDomElement &keyFrame, std::vecto
 
     int frame;
     if (type == "fractional") {
-        frame = (int) ceil(key * ceil(m_globalData.framerate * m_globalData.duration));
+        frame = (int) ceil(key * m_globalData.numFrames);
     } else {
         frame = (int) key;
-    }
-
-    SceneLightData *previousLight = lightAtKeyFrame.empty() ? NULL : std::get<1>(lightAtKeyFrame.back());
-    SceneLightData *light = new SceneLightData();
-
-    if (previousLight != NULL) {
-        memcpy(light, previousLight, sizeof(SceneLightData));
-    } else {
-        light->type = lightType;
     }
 
     bool setColor = false;
@@ -415,101 +383,89 @@ bool ScenefileReader::parseLightKeyframe(const QDomElement &keyFrame, std::vecto
         QDomElement e = childNode.toElement();
 
        if (e.tagName() == "color") {
-           if (!parseColor(e, light->color)) {
+           SceneColor colorAtFrame;
+           if (!parseColor(e, colorAtFrame)) {
                PARSE_ERROR(e);
                return false;
            }
+           lightKeyFrameData.color.push_back({ frame, colorAtFrame });
+           setColor = true;
        } else if (e.tagName() == "function") {
-           if (!parseTriple(e, light->function.x, light->function.y, light->function.z, "a", "b", "c") &&
-               !parseTriple(e, light->function.x, light->function.y, light->function.z, "x", "y", "z") &&
-               !parseTriple(e, light->function.x, light->function.y, light->function.z, "v1", "v2", "v3")) {
+           glm::vec3 functionAtFrame;
+           if (!parseTriple(e, functionAtFrame.x, functionAtFrame.y, functionAtFrame.z, "a", "b", "c") &&
+               !parseTriple(e, functionAtFrame.x, functionAtFrame.y, functionAtFrame.z, "x", "y", "z") &&
+               !parseTriple(e, functionAtFrame.x, functionAtFrame.y, functionAtFrame.z, "v1", "v2", "v3")) {
                PARSE_ERROR(e);
                return false;
            }
-       } else if (e.tagName() == "position") {
-           if (light->type == LightType::LIGHT_DIRECTIONAL) {
-               std::cout << ERROR_AT(e) << "position is not applicable to directional lights" << std::endl;
-               return false;
-           }
-           if (!parseTriple(e, light->pos.x, light->pos.y, light->pos.z, "x", "y", "z")) {
-               PARSE_ERROR(e);
-               return false;
-           }
+           lightKeyFrameData.function.push_back({ frame, functionAtFrame });
+           setFunction = true;
        } else if (e.tagName() == "direction") {
-           if (light->type == LightType::LIGHT_POINT) {
+           if (lightKeyFrameData.type == LightType::LIGHT_POINT) {
                std::cout << ERROR_AT(e) << "direction is not applicable to point lights" << std::endl;
                return false;
            }
-           if (!parseTriple(e, light->dir.x, light->dir.y, light->dir.z, "x", "y", "z")) {
+
+           glm::vec4 directionAtFrame = glm::vec4(0.f);
+           if (!parseTriple(e, directionAtFrame.x, directionAtFrame.y, directionAtFrame.z, "x", "y", "z")) {
                PARSE_ERROR(e);
                return false;
            }
+           lightKeyFrameData.dir.push_back({ frame, directionAtFrame });
+           setDirection = true;
        } else if (e.tagName() == "penumbra") {
-           if (light->type != LightType::LIGHT_SPOT) {
+           if (lightKeyFrameData.type != LightType::LIGHT_SPOT) {
                std::cout << ERROR_AT(e) << "penumbra is only applicable to spot lights" << std::endl;
                return false;
            }
-           float penumbra = 0.f;
-           if (!parseSingle(e, penumbra, "v")) {
+
+           float penumbraAtFrame = 0.f;
+           if (!parseSingle(e, penumbraAtFrame, "v")) {
                PARSE_ERROR(e);
                return false;
            }
 
-           light->penumbra = penumbra * M_PI / 180.f;
+           lightKeyFrameData.penumbra.push_back({ frame,  penumbraAtFrame * M_PI / 180.f });
+           setPenumbra = true;
        } else if (e.tagName() == "angle") {
-           if (light->type != LightType::LIGHT_SPOT) {
+           if (lightKeyFrameData.type != LightType::LIGHT_SPOT) {
                std::cout << ERROR_AT(e) << "angle is only applicable to spot lights" << std::endl;
                return false;
            }
 
-           float angle = 0.f;
-           if (!parseSingle(e, angle, "v")) {
+           float angleAtFrame = 0.f;
+           if (!parseSingle(e, angleAtFrame, "v")) {
                PARSE_ERROR(e);
                return false;
            }
-           light->angle = angle * M_PI / 180.f;
-       } else if (e.tagName() == "width") {
-           if (light->type != LightType::LIGHT_AREA) {
-               std::cout << ERROR_AT(e) << "width is only applicable to area lights" << std::endl;
-               return false;
-           }
-           if (!parseSingle(e, light->width, "v")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else if (e.tagName() == "height") {
-           if (light->type != LightType::LIGHT_AREA) {
-               std::cout << ERROR_AT(e) << "height is only applicable to area lights" << std::endl;
-               return false;
-           }
-           if (!parseSingle(e, light->height, "v")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else {
+
+           lightKeyFrameData.angle.push_back({ frame, angleAtFrame * M_PI / 180.f });
+           setAngle = true;
+       } else if (!e.isNull()){
+           std::cout << ERROR_AT(e) << "invalid tag type for lights" << std::endl;
            return false;
        }
 
         childNode = childNode.nextSibling();
     }
 
-    if (previousLight == NULL) {
+    if (frame == 0) {
         bool initializedAll = setColor;
 
-        switch (lightType) {
-        case LightType::LIGHT_POINT:
-            initializedAll &= setFunction;
-            break;
-        case LightType::LIGHT_DIRECTIONAL:
-            initializedAll &= setDirection;
-            break;
-        case LightType::LIGHT_SPOT:
-            initializedAll &= setFunction && setDirection && setPenumbra && setAngle;
-            break;
-        default:
-            std::cerr << "Invalid light type in parsing light keyframe: " << unsigned(lightType) << std::endl;
-            PARSE_ERROR(keyFrame);
-            return false;
+        switch (lightKeyFrameData.type) {
+            case LightType::LIGHT_POINT:
+                initializedAll = initializedAll && setFunction;
+                break;
+            case LightType::LIGHT_DIRECTIONAL:
+                initializedAll = initializedAll && setDirection;
+                break;
+            case LightType::LIGHT_SPOT:
+                initializedAll = initializedAll && setFunction && setDirection && setPenumbra && setAngle;
+                break;
+            default:
+                std::cerr << "Invalid light type in parsing light keyframe: " << unsigned(lightKeyFrameData.type) << std::endl;
+                PARSE_ERROR(keyFrame);
+                return false;
         }
 
         if (!initializedAll) {
@@ -519,7 +475,120 @@ bool ScenefileReader::parseLightKeyframe(const QDomElement &keyFrame, std::vecto
         }
     }
 
-    lightAtKeyFrame.push_back({frame, light});
+    return true;
+}
+
+float ScenefileReader::linearInterpolate(int frame, int startingFrame, int endingFrame, float start, float end) {
+    int frameDiff = endingFrame - startingFrame;
+    float between = (frame - startingFrame) / (float) frameDiff;
+
+//    std::cout << start + between * (end - start) << std::endl;
+
+    return start + between * (end - start);
+}
+
+std::function<glm::vec3(int)> ScenefileReader::interpolateVec3(std::vector<std::tuple<int, glm::vec3>>& keyFrameData) {
+    auto interpolator = [=](int f) {
+        for (int i = 0; i < keyFrameData.size(); i++) {
+            auto [startingFrame, startingVec] = keyFrameData[i];
+            if (f >= startingFrame) {
+                if (i == keyFrameData.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingVec
+                    return startingVec;
+                } else {
+                    auto [endingFrame, endingVec] = keyFrameData[i + 1];
+                    if (f < endingFrame) {
+                        // Interpolate between startingVec and endingVec
+                        return glm::vec3(
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.x, endingVec.x),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.y, endingVec.y),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.z, endingVec.z));
+                    }
+                }
+            }
+        }
+
+        std::cout << "ERROR: frame unreachable (interpolateVec3)" << std::endl;
+        exit(1);
+    };
+
+    return interpolator;
+}
+
+std::function<glm::vec4(int)> ScenefileReader::interpolateVec4(std::vector<std::tuple<int, glm::vec4>>& keyFrameData) {
+    auto interpolator = [=](int f) {
+        for (int i = 0; i < keyFrameData.size(); i++) {
+            auto [startingFrame, startingVec] = keyFrameData[i];
+            if (f >= startingFrame) {
+                if (i == keyFrameData.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingVec
+                    return startingVec;
+                } else {
+                    auto [endingFrame, endingVec] = keyFrameData[i + 1];
+                    if (f < endingFrame) {
+                        // Interpolate between startingVec and endingVec
+                        return glm::vec4(
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.x, endingVec.x),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.y, endingVec.y),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.z, endingVec.z),
+                                    linearInterpolate(f, startingFrame, endingFrame, startingVec.a, endingVec.a));
+                    }
+                }
+            }
+        }
+
+        std::cout << "ERROR: frame unreachable (interpolateVec4) " << f << std::endl;
+        exit(1);
+    };
+
+    return interpolator;
+}
+
+std::function<float (int)> ScenefileReader::interpolateFloat(std::vector<std::tuple<int, float>>& keyFrameData) {
+    auto interpolator = [=](int f) {
+        for (int i = 0; i < keyFrameData.size(); i++) {
+            auto [startingFrame, startingFloat] = keyFrameData[i];
+            if (f >= startingFrame) {
+                if (i == keyFrameData.size() - 1) {
+                    // Between startingFrame and the end of the animation - just repeat startingVec
+                    return startingFloat;
+                } else {
+                    auto [endingFrame, endingFloat] = keyFrameData[i + 1];
+                    if (f < endingFrame) {
+                        // Interpolate between startingVec and endingVec
+                        return linearInterpolate(f, startingFrame, endingFrame, startingFloat, endingFloat);
+                    }
+                }
+            }
+        }
+
+        std::cout << "ERROR: frame unreachable" << std::endl;
+        exit(1);
+    };
+
+    return interpolator;
+}
+
+void ScenefileReader::interpolateLight(SceneLightKeyFrameData &lightKeyFrameData, InterpolatedSceneLightData *interpolatedSceneLight) {
+    interpolatedSceneLight->color = interpolateVec4(lightKeyFrameData.color);
+
+    switch (interpolatedSceneLight->type) {
+        case LightType::LIGHT_DIRECTIONAL:
+            interpolatedSceneLight->dir = interpolateVec4(lightKeyFrameData.dir);
+            break;
+        case LightType::LIGHT_POINT:
+            interpolatedSceneLight->function = interpolateVec3(lightKeyFrameData.function);
+            break;
+        case LightType::LIGHT_SPOT:
+            interpolatedSceneLight->function = interpolateVec3(lightKeyFrameData.function);
+            interpolatedSceneLight->dir = interpolateVec4(lightKeyFrameData.dir);
+            interpolatedSceneLight->angle = interpolateFloat(lightKeyFrameData.angle);
+            interpolatedSceneLight->penumbra = interpolateFloat(lightKeyFrameData.penumbra);
+            break;
+        default:
+             std::cout << "ERROR: unimplemented light type: " << unsigned(interpolatedSceneLight->type) << std::endl;
+             exit(1);
+    }
 }
 
 /**
@@ -531,10 +600,6 @@ bool ScenefileReader::parseLightData(const QDomElement &lightdata, SceneNode *no
 
    node->lights.push_back(light);
    memset(light, 0, sizeof(InterpolatedSceneLightData));
-
-//   light->dir = glm::vec4(0.f, 0.f, 0.f, 0.f);
-//   light->color.r = light->color.g = light->color.b = 1;
-//   light->function = glm::vec3(1, 0, 0);
 
    if (!lightdata.hasAttribute("id")) {
        std::cerr << "You must supply an ID for your light" << std::endl;
@@ -562,79 +627,16 @@ bool ScenefileReader::parseLightData(const QDomElement &lightdata, SceneNode *no
    }
 
    // Iterate over child elements
+   SceneLightKeyFrameData lightKeyFrameData;
+   lightKeyFrameData.id = light->id;
+   lightKeyFrameData.type = light->type;
+
    QDomNode childNode = lightdata.firstChild();
    while (!childNode.isNull()) {
        QDomElement e = childNode.toElement();
 
        if (e.tagName() == "keyframe") {
-           if (!parseLightKeyframe(e)) {
-               PARSE_ERROR(e);
-               return false;
-           } else if (!e.isNull()) {
-                UNSUPPORTED_ELEMENT(e);
-                return false;
-           }
-       }
-
-       childNode = childNode.nextSibling();
-   }
-
-   return true;
-}
-
-/**
-* Parse a <cameradata> tag and fill in m_cameraData.
-*/
-bool ScenefileReader::parseCameraData(const QDomElement &cameradata) {
-   bool focusFound = false;
-   bool lookFound = false;
-
-   // Iterate over child elements
-   QDomNode childNode = cameradata.firstChild();
-   while (!childNode.isNull()) {
-       QDomElement e = childNode.toElement();
-       if (e.tagName() == "pos") {
-           if (!parseTriple(e, m_cameraData.pos.x, m_cameraData.pos.y, m_cameraData.pos.z, "x", "y", "z")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-           m_cameraData.pos.w = 1;
-       } else if (e.tagName() == "look" || e.tagName() == "focus") {
-           if (!parseTriple(e, m_cameraData.look.x, m_cameraData.look.y, m_cameraData.look.z, "x", "y", "z")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-
-           if (e.tagName() == "focus") {
-               // Store the focus point in the look vector (we will later subtract
-               // the camera position from this to get the actual look vector)
-               m_cameraData.look.w = 1;
-               focusFound = true;
-           } else {
-               // Just store the look vector
-               m_cameraData.look.w = 0;
-               lookFound = true;
-           }
-       } else if (e.tagName() == "up") {
-           if (!parseTriple(e, m_cameraData.up.x, m_cameraData.up.y, m_cameraData.up.z, "x", "y", "z")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-           m_cameraData.up.w = 0;
-       } else if (e.tagName() == "heightangle") {
-           float heightAngle = 0.f;
-           if (!parseSingle(e, heightAngle, "v")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-           m_cameraData.heightAngle = heightAngle * M_PI / 180.f;
-       } else if (e.tagName() == "aperture") {
-           if (!parseSingle(e, m_cameraData.aperture, "v")) {
-               PARSE_ERROR(e);
-               return false;
-           }
-       } else if (e.tagName() == "focallength") {
-           if (!parseSingle(e, m_cameraData.focalLength, "v")) {
+           if (!parseLightKeyFrame(e, lightKeyFrameData)) {
                PARSE_ERROR(e);
                return false;
            }
@@ -642,20 +644,118 @@ bool ScenefileReader::parseCameraData(const QDomElement &cameradata) {
            UNSUPPORTED_ELEMENT(e);
            return false;
        }
+
        childNode = childNode.nextSibling();
    }
 
-   if (focusFound && lookFound) {
-       std::cout << ERROR_AT(cameradata) << "camera can not have both look and focus" << std::endl;
-       return false;
+   interpolateLight(lightKeyFrameData, light);
+   node->lights.push_back(light);
+   return true;
+}
+
+bool ScenefileReader::parseCameraKeyFrame(const QDomElement &keyFrame, SceneCameraKeyFrameData &cameraKeyFrameData) {
+    float key = keyFrame.attribute("key").toFloat();
+    std::string type = keyFrame.attribute("type").toStdString();
+
+    int frame;
+    if (type == "fractional") {
+        frame = (int) ceil(key * m_globalData.numFrames);
+    } else {
+        frame = (int) key;
+    }
+
+    std::cout << "Parsing a camera keyframe " << frame << std::endl;
+
+
+    bool lookFound = false;
+    bool upFound = false;
+    bool heightAngleFound = false;
+
+
+    QDomNode childNode = keyFrame.firstChild();
+    while (!childNode.isNull()) {
+        QDomElement e = childNode.toElement();
+        if (e.tagName() == "look") {
+            glm::vec4 lookAtFrame = glm::vec4(0.f);
+
+            if (!parseTriple(e, lookAtFrame.x, lookAtFrame.y, lookAtFrame.z, "x", "y", "z")) {
+                PARSE_ERROR(e);
+                return false;
+            }
+
+            cameraKeyFrameData.look.push_back({ frame, lookAtFrame });
+            lookFound = true;
+        } else if (e.tagName() == "up") {
+            glm::vec4 upAtFrame = glm::vec4(0.f);
+
+            if (!parseTriple(e, upAtFrame.x, upAtFrame.y, upAtFrame.z, "x", "y", "z")) {
+                PARSE_ERROR(e);
+                return false;
+            }
+
+            cameraKeyFrameData.up.push_back({ frame, upAtFrame });
+            upFound = true;
+        } else if (e.tagName() == "heightangle") {
+            float heightAngle = 0.f;
+            if (!parseSingle(e, heightAngle, "v")) {
+                PARSE_ERROR(e);
+                return false;
+            }
+
+            cameraKeyFrameData.heightAngle.push_back({ frame, heightAngle * M_PI / 180.f });
+            heightAngleFound = true;
+        } else if (!e.isNull()) {
+            UNSUPPORTED_ELEMENT(e);
+            return false;
+        }
+        childNode = childNode.nextSibling();
+    }
+
+    if (frame == 0 && !(lookFound && upFound && heightAngleFound)) {
+        std::cerr << "Camera not fully initialized" << std::endl;
+        PARSE_ERROR(keyFrame);
+    }
+
+    return true;
+}
+
+void ScenefileReader::interpolateCamera(SceneCameraKeyFrameData& cameraKeyFrameData, InterpolatedCameraData *camera) {
+    camera->heightAngle = interpolateFloat(cameraKeyFrameData.heightAngle);
+    camera->look = interpolateVec4(cameraKeyFrameData.look);
+    camera->up = interpolateVec4(cameraKeyFrameData.up);
+}
+
+/**
+* Parse a <cameradata> tag and fill in m_cameraData.
+*/
+bool ScenefileReader::parseCameraData(const QDomElement &cameradata, SceneNode *node) {
+   if (foundCamera) {
+       std::cout << ERROR_AT(cameradata) << "cannot have more than one camera per scene." << std::endl;
    }
 
-   if (focusFound) {
-       // Convert the focus point (stored in the look vector) into a
-       // look vector from the camera position to that focus point.
-       m_cameraData.look -= m_cameraData.pos;
+   SceneCameraKeyFrameData cameraKeyFrameData;
+   // Iterate over child elements
+   QDomNode childNode = cameradata.firstChild();
+   while (!childNode.isNull()) {
+       QDomElement e = childNode.toElement();
+
+       if (e.tagName() == "keyframe") {
+           if (!parseCameraKeyFrame(e, cameraKeyFrameData)) {
+               PARSE_ERROR(e);
+               return false;
+            }
+       } else if (!e.isNull()) {
+            UNSUPPORTED_ELEMENT(e);
+            return false;
+       }
+
+       childNode = childNode.nextSibling();
    }
 
+   InterpolatedCameraData *camera = new InterpolatedCameraData();
+   interpolateCamera(cameraKeyFrameData, camera);
+   node->camera.emplace(camera);
+   foundCamera = true;
    return true;
 }
 
@@ -932,15 +1032,6 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
     }
 
     return true;
-}
-
-float linearInterpolate(int frame, int startingFrame, int endingFrame, float start, float end) {
-    int frameDiff = endingFrame - startingFrame;
-    float between = (frame - startingFrame) / (float) frameDiff;
-
-//    std::cout << start + between * (end - start) << std::endl;
-
-    return start + between * (end - start);
 }
 
 void ScenefileReader::interpolateTranslation(std::vector<std::tuple<int, SceneTransformation*>> &translations, SceneNode *node) {

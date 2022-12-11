@@ -28,6 +28,8 @@ public:
     static bool parse(std::string filepath, std::vector<RenderData*> &renderData);
 private:
     static glm::mat4 buildTransformMatrix(InterpolatedSceneTransformation* transformation, int frame);
-    static void buildRenderShapes(SceneNode *node, std::vector<RenderShapeData> &shapes, glm::mat4 clm, int frame);
+    static SceneLightData buildLight(InterpolatedSceneLightData* light, glm::mat4 &ctm, int frame);
+    static SceneCameraData buildCamera(InterpolatedCameraData *camera, glm::mat4 &ctm, int frame);
+    static void buildRenderObjects(SceneNode *node, RenderData *rd, glm::mat4 ctm, int frame);
 };
 

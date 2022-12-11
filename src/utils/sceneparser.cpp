@@ -25,13 +25,62 @@ glm::mat4 SceneParser::buildTransformMatrix(InterpolatedSceneTransformation* tra
    }
 }
 
+SceneLightData SceneParser::buildLight(InterpolatedSceneLightData *light, glm::mat4 &ctm, int frame) {
+    std::cout << "Building light" << std::endl;
+
+    SceneLightData lightAtFrame;
+    lightAtFrame.id = light->id;
+    lightAtFrame.type = light->type;
+
+    lightAtFrame.color = light->color(frame);
+
+    switch (light->type) {
+        case LightType::LIGHT_DIRECTIONAL:
+            lightAtFrame.dir = light->dir(frame);
+            break;
+        case LightType::LIGHT_POINT:
+            lightAtFrame.pos = ctm * glm::vec4{ 0.f, 0.f, 0.f, 1.f };
+            lightAtFrame.function = light->function(frame);
+            break;
+        case LightType::LIGHT_SPOT:
+            lightAtFrame.pos = ctm * glm::vec4{ 0.f, 0.f, 0.f, 1.f };
+            lightAtFrame.function = light->function(frame);
+            lightAtFrame.dir = light->dir(frame);
+            lightAtFrame.angle = light->angle(frame);
+            lightAtFrame.penumbra = light->penumbra(frame);
+            break;
+        default:
+            std::cout << "ERROR: cannot build light of type: " << unsigned(light->type) << std::endl;
+            exit(1);
+    }
+
+    return lightAtFrame;
+}
+
+SceneCameraData SceneParser::buildCamera(InterpolatedCameraData* camera, glm::mat4 &ctm, int frame) {
+    std::cout << "Building camera" << std::endl;
+
+    SceneCameraData cameraAtFrame;
+
+    cameraAtFrame.heightAngle = camera->heightAngle(frame);
+
+    cameraAtFrame.pos = ctm * glm::vec4{ 0.f, 0.f, 0.f, 1.f };
+    cameraAtFrame.look = camera->look(frame);
+    std::cout << "look: " << cameraAtFrame.look.x << " " << cameraAtFrame.look.y << " " << cameraAtFrame.look.z << std::endl;
+
+    std::cout << "Height up" << std::endl;
+    cameraAtFrame.up = camera->up(frame);
+
+    return cameraAtFrame;
+}
+
 /**
  * @brief SceneParser::buildRenderShapes - Traverses scene graph, while populating a vector of all shapes and their cumulative transformation matricies
  * @param node - A pointer to a node in the graph (originally called on root)
  * @param shapes - A vector of shape data to be populated
  * @param ctm - The cumulative transformation matrix to this poitn
  */
-void SceneParser::buildRenderShapes(SceneNode *node, std::vector<RenderShapeData> &shapes, glm::mat4 ctm, int frame) {
+void SceneParser::buildRenderObjects(SceneNode *node, RenderData *rd, glm::mat4 ctm, int frame) {
     // multiply all the transforms on this node together
     glm::mat4 nodeTransform(1.0f); // start as identity matrixx
     for (auto *transform : node->transformations) {
@@ -44,14 +93,27 @@ void SceneParser::buildRenderShapes(SceneNode *node, std::vector<RenderShapeData
     // if this is a leaf node, add the shapes
     if (node->primitives.size() > 0) {
         for (auto *primitive : node->primitives) {
-            shapes.push_back({ *primitive,  ctm });
+            rd->shapes.push_back({ *primitive,  ctm });
         }
         return;
     }
 
+    // if this is a leaf node, add the lights
+    if (node->lights.size() > 0) {
+        for (auto *light : node->lights) {
+            rd->lights.push_back(buildLight(light, ctm, frame));
+        }
+        return;
+    }
+
+    // if this is a leaf node, construct the camera
+    if (node->camera.has_value()) {
+        rd->cameraData = buildCamera(node->camera.value(), ctm, frame);
+    }
+
     // recur on each child node
     for (auto *child : node->children) {
-        buildRenderShapes(child, shapes, ctm, frame);
+        buildRenderObjects(child, rd, ctm, frame);
     }
 
     return;
@@ -79,20 +141,16 @@ bool SceneParser::parse(std::string filepath, std::vector<RenderData*> &renderDa
         RenderData* rd = new RenderData();
 
         rd->globalData = fileReader.getGlobalData();
-        rd->lights = fileReader.getLights();
-        rd->cameraData = fileReader.getCameraData();
-
 
         // make sure shape data is cleared
         rd->shapes.clear();
+        rd->lights.clear();
 
         // start at the root with an identity matrix
-        buildRenderShapes(fileReader.getRootNode(), rd->shapes, glm::mat4(1.0f), i);
+        buildRenderObjects(fileReader.getRootNode(), rd, glm::mat4(1.0f), i);
 
         renderData.push_back(rd);
     }
-
-
 
     return true;
 }

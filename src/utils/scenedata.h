@@ -67,6 +67,18 @@ struct SceneLightData {
     float width, height; // No longer supported (area lights)
 };
 
+// stores data for a light across key frames
+struct SceneLightKeyFrameData {
+    int id;
+    LightType type;
+
+    std::vector<std::tuple<int, SceneColor>> color;
+    std::vector<std::tuple<int, glm::vec3>> function;
+    std::vector<std::tuple<int, glm::vec4>> dir;
+    std::vector<std::tuple<int, float>> penumbra;
+    std::vector<std::tuple<int, float>> angle;
+};
+
 // Light capable of interpolating between most of its parameter values
 struct InterpolatedSceneLightData {
     int id;
@@ -98,6 +110,13 @@ struct InterpolatedCameraData {
     std::function<glm::vec4(int)> look;
     std::function<glm::vec4(int)> up;
     std::function<float(int)> heightAngle;
+};
+
+// stores data for a camera accross multiple keyframes
+struct SceneCameraKeyFrameData {
+    std::vector<std::tuple<int, glm::vec4>> look;
+    std::vector<std::tuple<int, glm::vec4>> up;
+    std::vector<std::tuple<int, float>> heightAngle;
 };
 
 // Struct which contains data for texture mapping files
