@@ -597,8 +597,6 @@ void ScenefileReader::interpolateLight(SceneLightKeyFrameData &lightKeyFrameData
 bool ScenefileReader::parseLightData(const QDomElement &lightdata, SceneNode *node) {
    // Create a default light
    InterpolatedSceneLightData* light = new InterpolatedSceneLightData();
-
-   node->lights.push_back(light);
    memset(light, 0, sizeof(InterpolatedSceneLightData));
 
    if (!lightdata.hasAttribute("id")) {
@@ -915,7 +913,7 @@ bool ScenefileReader::parseKeyFrame(const QDomElement &keyFrame, TransformationM
                }
                idTranslations.push_back({ frame, t });
             }
-        } else if (e.tagName() == "matrix") {
+        } else {
             return false;
         }
 
