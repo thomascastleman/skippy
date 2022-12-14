@@ -1,0 +1,117 @@
+<scenefile>
+	<globaldata>
+		<diffusecoeff v="0.5" />
+		<specularcoeff v="0.5" />
+		<ambientcoeff v="0.5" />
+
+		<framerate fps="15" />
+		<duration seconds="3" />
+	</globaldata>
+
+	<object type="tree" name="root">
+		<transblock>
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="-6" y="4" z="4" />
+			</keyframe>
+
+			<keyframe type="fractional" key="0.5">
+				<translate id="0" x="-1" y="1" z="1" />
+			</keyframe>
+
+			<keyframe type="fractional" key="1">
+				<translate id="0" x="3" y="2" z="-2" />
+			</keyframe>
+
+			<cameradata>
+				<keyframe type="fractional" key="0">
+					<look x="6" y="-4" z="-4" />
+					<up x="0" y="1" z="0" />
+					<heightangle v="30" />
+				</keyframe>
+
+				<keyframe type="fractional" key="1">
+					<up x="1" y="-1" z="0" />
+				</keyframe>
+			</cameradata>
+		</transblock>
+
+		<transblock>
+			<lightdata id="0" type="directional">
+				<keyframe type="fractional" key="0">
+					<color r="0.8" g="0.8" b="0.8" />
+					<direction x="0" y="-1" z="-1" />
+				</keyframe>
+			</lightdata>
+
+			<lightdata id="1" type="directional">
+				<keyframe type="fractional" key="0">
+					<color r="0.4" g="0.4" b="0.4" />
+					<direction x="1" y="-1" z="0" />
+				</keyframe>
+			</lightdata>
+		</transblock>
+
+		<transblock>
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="-0.65" y="0" z="0.65" />
+			</keyframe>
+
+			<object type="primitive" name="sphere">
+				<shininess v="15.0" />
+				<specular r="1.0" g="1.0" b="1.0" />
+				<reflective r="0.8" g="0.6" b="0.6" />
+				<diffuse r="0.8" g="0.6" b="0.6" />
+			</object>
+		</transblock>
+		<transblock>
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="-0.65" y="0" z="-0.65" />
+			</keyframe>
+
+			<object type="primitive" name="sphere">
+				<shininess v="15.0" />
+				<specular r="1.0" g="1.0" b="1.0" />
+				<reflective r="0.6" g="0.6" b="0.8" />
+				<diffuse r="0.6" g="0.6" b="0.8" />
+			</object>
+		</transblock>
+		<transblock>
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="0.65" y="0" z="-0.65" />
+			</keyframe>
+
+			<object type="primitive" name="sphere">
+				<shininess v="15.0" />
+				<specular r="1.0" g="1.0" b="1.0" />
+				<reflective r="0.6" g="0.8" b="0.6" />
+				<diffuse r="0.6" g="0.8" b="0.6" />
+			</object>
+		</transblock>
+		<transblock>
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="0.65" y="0" z="0.65" />
+			</keyframe>
+
+			<object type="primitive" name="sphere">
+				<shininess v="15.0" />
+				<specular r="1.0" g="1.0" b="1.0" />
+				<reflective r="0.6" g="0.6" b="0.6" />
+				<diffuse r="0.7" g="0.7" b="0.7" />
+			</object>
+		</transblock>
+		<transblock>
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="0" y="-0.6" z="0" />
+				<scale id="1" x="6" y="0.1" z="6" />
+			</keyframe>
+
+			<object type="primitive" name="cube">
+				<diffuse r="0" g="1" b="1" />
+				<texture file="textures/bark.png" u="1" v="5" />
+				<reflective r="0.3" g="0.3" b="0.3" />
+				<blend v="0.9" />
+			</object>
+		</transblock>
+	</object>
+
+</scenefile>
