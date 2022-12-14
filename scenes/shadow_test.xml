@@ -4,7 +4,7 @@
 		<specularcoeff v="0.5" />
 		<ambientcoeff v="0.5" />
 
-		<framerate fps="15" />
+		<framerate fps="32" />
 		<duration seconds="2" />
 	</globaldata>
 
