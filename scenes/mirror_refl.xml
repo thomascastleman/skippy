@@ -4,8 +4,8 @@
 		<specularcoeff v="0.5" />
 		<ambientcoeff v="0.5" />
 
-		<framerate fps="15" />
-		<duration seconds="3" />
+		<framerate fps="30" />
+		<duration seconds="8" />
 	</globaldata>
 
 	<object type="tree" name="root">
@@ -22,7 +22,7 @@
 				</keyframe>
 
 				<keyframe type="fractional" key="1">
-					<heightangle v="20" />
+					<heightangle v="10" />
 				</keyframe>
 			</cameradata>
 		</transblock>

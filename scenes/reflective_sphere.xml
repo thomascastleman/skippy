@@ -4,8 +4,8 @@
 		<specularcoeff v="0.5"/>
 		<ambientcoeff v="0.5"/>
 
-		<framerate fps="60"/>
-		<duration seconds="5"/>
+		<framerate fps="30"/>
+		<duration seconds="3"/>
 	</globaldata>
 
 	<object type="tree" name="root">
@@ -52,20 +52,6 @@
 		</transblock>
 
         <transblock>
-            <!-- <lightdata id="1" type="directional">
-				<keyframe type="fractional" key="0">
-					<color r="0.3" g="0.3" b="0.3"/>
-					<direction x="1" y="0" z="0" />
-				</keyframe>
-			</lightdata>
-
-            <lightdata id="2" type="directional">
-				<keyframe type="fractional" key="0">
-					<color r="0.3" g="0.3" b="0.3"/>
-					<direction x="-1" y="0" z="0" />
-				</keyframe>
-			</lightdata> -->
-
             <lightdata id="2" type="directional">
 				<keyframe type="fractional" key="0">
 					<color r="0.1" g="0.1" b="0.1"/>
