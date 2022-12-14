@@ -4,8 +4,8 @@
 		<specularcoeff v="0.5" />
 		<ambientcoeff v="0.5" />
 
-		<framerate fps="1" />
-		<duration seconds="1" />
+		<framerate fps="15" />
+		<duration seconds="3" />
 	</globaldata>
 
 	<object type="tree" name="root">
@@ -19,6 +19,10 @@
 					<look x="6" y="-4" z="-4" />
 					<up x="0" y="1" z="0" />
 					<heightangle v="30" />
+				</keyframe>
+
+				<keyframe type="fractional" key="1">
+					<heightangle v="20" />
 				</keyframe>
 			</cameradata>
 		</transblock>
@@ -67,6 +71,11 @@
 			<keyframe type="fractional" key="0">
 				<translate id="0" x="0.65" y="0" z="-0.65" />
 			</keyframe>
+
+			<keyframe type="fractional" key="1">
+				<translate id="0" x="0.1" y="0" z="-0.65" />
+			</keyframe>
+
 			<object type="primitive" name="sphere">
 				<shininess v="15.0" />
 				<specular r="1.0" g="1.0" b="1.0" />
@@ -77,7 +86,13 @@
 		<transblock>
 			<keyframe type="fractional" key="0">
 				<translate id="0" x="0.65" y="0" z="0.65" />
+				<rotate id="1" x="0" y="1" z="0" angle="0" />
 			</keyframe>
+
+			<keyframe type="fractional" key="1">
+				<rotate id="1" x="0" y="1" z="0" angle="90" />
+			</keyframe>
+
 			<object type="primitive" name="cube">
 				<shininess v="15.0" />
 				<specular r="1.0" g="1.0" b="1.0" />
