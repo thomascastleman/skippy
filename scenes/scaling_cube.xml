@@ -42,8 +42,20 @@
 				<scale id="1" x="0.75" y="0.75" z="0.75" />
 			</keyframe>
 
+			<keyframe type="fractional" key="0.25">
+				<scale id="1" x="1.2" y="1.2" z="1.2" />
+			</keyframe>
+
+			<keyframe type="fractional" key="0.5">
+				<scale id="1" x="0.75" y="0.75" z="0.75" />
+			</keyframe>
+
+			<keyframe type="fractional" key="0.75">
+				<scale id="1" x="0.2" y="0.2" z="0.2" />
+			</keyframe>
+
 			<keyframe type="fractional" key="1">
-				<scale id="1" x="3" y="3" z="3" />
+				<scale id="1" x="0.75" y="0.75" z="0.75" />
 			</keyframe>
 
 			<object type="primitive" name="cube">
