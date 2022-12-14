@@ -13,6 +13,10 @@ echo "Using output directory \"$OUTPUT_DIR\""
 echo "Using executable \"$EXECUTABLE\""
 echo "Using framerate $FRAMERATE"
 
+# Clear out any frames/videos from previous renders so ffmpeg doesn't get confused
+rm $OUTPUT_DIR/*.png
+rm $OUTPUT_DIR/*.mp4
+
 # Invoke raytracer
 ./$EXECUTABLE QSettings.ini
 
