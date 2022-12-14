@@ -2,10 +2,10 @@
 	<globaldata>
 		<diffusecoeff v="0.8" />
 		<specularcoeff v="0.8" />
-		<ambientcoeff v="0.5" />
+		<ambientcoeff v="0.8" />
 
-		<framerate fps="15" />
-		<duration seconds="2" />
+		<framerate fps="30" />
+		<duration seconds="5" />
 	</globaldata>
 
 	<object type="tree" name="root">
@@ -25,12 +25,12 @@
 
 		<transblock>
 			<keyframe type="fractional" key="0">
-				<translate id="0" x="1" y="10" z="10" />
 				<rotate id="1" x="0" y="1" z="0" angle="0" />
+				<translate id="0" x="1" y="0" z="0" />
 			</keyframe>
 
 			<keyframe type="fractional" key="1">
-				<rotate id="1" x="0" y="1" z="0" angle="180" />
+				<rotate id="1" x="0" y="1" z="0" angle="360" />
 			</keyframe>
 
 			<lightdata id="0" type="point">
@@ -43,7 +43,12 @@
 
 		<transblock>
 			<keyframe type="fractional" key="0">
-				<translate id="0" x="1" y="-10" z="-10" />
+				<rotate id="1" x="-1" y="-1" z="0" angle="0" />
+				<translate id="0" x="0" y="-1" z="-1" />
+			</keyframe>
+
+			<keyframe type="fractional" key="1">
+				<rotate id="1" x="-1" y="-1" z="0" angle="-360" />
 			</keyframe>
 
 			<lightdata id="1" type="point">
@@ -56,8 +61,12 @@
 
 		<transblock>
 			<keyframe type="fractional" key="0">
-				<rotate id="0" x="0" y="0" z="1" angle="-45" />
+				<rotate id="0" x="0" y="1" z="1" angle="-45" />
 				<scale id="1" x="1.5" y="1.5" z="1.5" />
+			</keyframe>
+
+			<keyframe type="fractional" key="1">
+				<rotate id="0" x="0" y="1" z="1" angle="-405" />
 			</keyframe>
 
 			<object type="primitive" name="sphere">
