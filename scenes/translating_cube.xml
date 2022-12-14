@@ -4,8 +4,8 @@
 		<specularcoeff v="0.5" />
 		<ambientcoeff v="0.5" />
 
-		<framerate fps="60" />
-		<duration seconds="5" />
+		<framerate fps="30" />
+		<duration seconds="10" />
 	</globaldata>
 
 	<object type="tree" name="root">
@@ -24,10 +24,14 @@
 		</transblock>
 
 		<transblock>
-			<lightdata id="0" type="directional">
+			<keyframe type="fractional" key="0">
+				<translate id="0" x="0" y="1" z="1" />
+			</keyframe>
+
+			<lightdata id="0" type="point">
 				<keyframe type="fractional" key="0">
-					<color r="1.5" g="1.5" b="1.5" />
-					<direction x="-3" y="-2" z="-1" />
+					<color r="2.5" g="2.5" b="2.5" />
+					<function v1="0.5" v2="0" v3="0" />
 				</keyframe>
 			</lightdata>
 		</transblock>
@@ -48,9 +52,10 @@
 			</keyframe>
 
 			<object type="primitive" name="cube">
-				<diffuse r="1" g="0" b="0" />
+				<diffuse r="1" g="1" b="1" />
 				<specular r="1.0" g="1.0" b="1.0" />
 				<shininess v="25.0" />
+				<reflective r="5" g="1" b="1" />
 			</object>
 		</transblock>
 	</object>
