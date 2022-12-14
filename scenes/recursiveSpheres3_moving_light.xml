@@ -94,23 +94,11 @@
 				<translate id="15" x="10" y="4.1" z="16" />
 			</keyframe>
 
-			<keyframe type="fractional" key="1">
-				<translate id="15" x="0" y="4.1" z="0" />
-			</keyframe>
-
 			<cameradata>
 				<keyframe type="fractional" key="0">
 					<up x="0" y="1" z="0" />
 					<heightangle v="49.5" />
-					<look x="-9" y="-1" z="-16" />
-				</keyframe>
-
-				<keyframe type="fractional" key="0.5">
-					<look x="-9" y="-5" z="-16" />
-				</keyframe>
-
-				<keyframe type="fractional" key="1">
-					<look x="-9" y="-1" z="-16" />
+					<look x="-9" y="-3.2" z="-16" />
 				</keyframe>
 			</cameradata>
 		</transblock>
@@ -133,10 +121,6 @@
 				<keyframe type="fractional" key="0">
 					<color r="1" g="1" b="1" />
 					<function v1="1.5" v2="0" v3="0" />
-				</keyframe>
-
-				<keyframe type="fractional" key="1">
-					<color r="0" g="0" b="1" />
 				</keyframe>
 			</lightdata>
 		</transblock>
