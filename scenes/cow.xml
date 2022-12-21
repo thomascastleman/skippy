@@ -1,0 +1,233 @@
+<scenefile>
+    <globaldata>
+        <diffusecoeff v="0.5" />
+        <specularcoeff v="0.5" />
+        <ambientcoeff v="0.5" />
+
+        <framerate fps="30" />
+        <duration seconds="10" />
+    </globaldata>
+
+    <object type="tree" name="cow">
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="0.2" y="0" z="0" />
+                <scale id="1" x="1.5" y="1.3" z="1.3" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1" y="0" z="0" />
+                <scale id="1" x="0.75" y="0.75" z="1" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1.2" y="-0.1" z="0" />
+                <scale id="1" x="0.5" y="0.5" z="0.9" />
+            </keyframe>
+            <object type="primitive" name="sphere">
+                <diffuse r="1.8" g="1.4" b="1.4" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1.2" y="0.18" z="0.2" />
+                <scale id="1" x="0.23" y="0.23" z="0.23" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="2" g="2" b="2" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1.2" y="0.18" z="-0.2" />
+                <scale id="1" x="0.23" y="0.23" z="0.23" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="2" g="2" b="2" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1.28" y="0.18" z="0.22" />
+                <scale id="1" x="0.1" y="0.1" z="0.1" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="0" g="0" b="0" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1.28" y="0.18" z="-0.22" />
+                <scale id="1" x="0.1" y="0.1" z="0.1" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="0" g="0" b="0" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1" y="0.18" z="0.2" />
+                <scale id="1" x="0.15" y="0.6" z="0.15" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="1" y="0.18" z="-0.2" />
+                <scale id="1" x="0.15" y="0.6" z="0.15" />
+            </keyframe>
+
+            <object type="primitive" name="sphere">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="0.6" y="-0.4" z="0.25" />
+                <scale id="1" x="0.35" y="0.5" z="0.35" />
+            </keyframe>
+
+            <object type="primitive" name="cylinder">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="0.6" y="-0.4" z="-0.25" />
+                <scale id="1" x="0.35" y="0.5" z="0.35" />
+            </keyframe>
+
+            <object type="primitive" name="cylinder">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="-0.2" y="-0.4" z="0.25" />
+                <scale id="1" x="0.35" y="0.5" z="0.35" />
+            </keyframe>
+
+            <object type="primitive" name="cylinder">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="-0.2" y="-0.4" z="-0.25" />
+                <scale id="1" x="0.35" y="0.5" z="0.35" />
+            </keyframe>
+
+            <object type="primitive" name="cylinder">
+                <diffuse r="1" g="1" b="1" />
+                <specular r="1.0" g="1.0" b="1.0" />
+                <shininess v="25.0" />
+                <texture file="textures/cow_texture.png" u="1" v="1" />
+                <blend v="0.9" />
+            </object>
+        </transblock>
+    </object>
+
+    <object type="tree" name="root">
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <translate id="0" x="3" y="2" z="3" />
+            </keyframe>
+
+            <cameradata>
+                <keyframe type="fractional" key="0">
+                    <look x="-3" y="-2" z="-3" />
+                    <up x="0" y="1" z="0" />
+                    <heightangle v="30" />
+                </keyframe>
+            </cameradata>
+        </transblock>
+
+        <transblock>
+            <lightdata id="0" type="directional">
+                <keyframe type="fractional" key="0">
+                    <color r="1" g="1" b="1" />
+                    <direction x="-3" y="-2" z="-1" />
+                </keyframe>
+            </lightdata>
+        </transblock>
+
+        <transblock>
+            <keyframe type="fractional" key="0">
+                <rotate id="0" x="1" y="1" z="0" angle="0" />
+            </keyframe>
+            <keyframe type="fractional" key="1">
+                <rotate id="0" x="1" y="1" z="0" angle="-360" />
+            </keyframe>
+
+            <object type="master" name="cow" />
+        </transblock>
+    </object>
+
+</scenefile>
